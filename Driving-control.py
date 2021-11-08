@@ -42,7 +42,7 @@ class driver():
         os.chdir(tmp)
         """
         
-        return keras.models.load_model("Driving_model.h5")
+        return keras.models.load_model("LargerNN_driving_model.h5")
 
     def follow_path(self, img):
         processed = self.imgProcessing(img)
@@ -77,12 +77,13 @@ class driver():
         cropped = img[375:]
         shape = cropped.shape
         compressed = cv2.resize(cropped, (int(shape[1]/5), int(shape[0]/5)), interpolation = cv2.INTER_CUBIC)
-        compressed[:, :, 0] = compressed[:, :, 2] # removes the green and blue channel i think
-        compressed[:, :, 1] = compressed[:, :, 2]
-        color_img = cv2.cvtColor(compressed, cv2.COLOR_RGB2GRAY)
-        gray_img = cv2.cvtColor(color_img, cv2.COLOR_GRAY2BGR)
-        ret,bin_img = cv2.threshold(gray_img,100,255,cv2.THRESH_BINARY)
-        return np.expand_dims(bin_img, axis=0)
+        compressed = (compressed.astype(float) -128) / 128
+        # compressed[:, :, 0] = compressed[:, :, 2] # removes the green and blue channel i think
+        # compressed[:, :, 1] = compressed[:, :, 2]
+        # color_img = cv2.cvtColor(compressed, cv2.COLOR_RGB2GRAY)
+        # gray_img = cv2.cvtColor(color_img, cv2.COLOR_GRAY2BGR)
+        # ret,bin_img = cv2.threshold(gray_img,100,255,cv2.THRESH_BINARY)
+        return np.expand_dims(compressed, axis=0)
 
 #if __name__ == '__main__':
 print("starting Script")
