@@ -1,7 +1,4 @@
-import os
-import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import *
+import cv2
 import rospy
 from time import sleep
 import roslib
@@ -11,15 +8,8 @@ from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Twist
 import numpy as np
-from tensorflow.python.keras.backend import set_session
-from tensorflow.python.keras.models import load_model
 
-sess1 = tf.compat.v1.Session()    
-graph1 = tf.get_default_graph()
-set_session(sess1)
-
-
-class driver():
+class drivingController():
     def __init__(self):
         self.twist_pub = rospy.Publisher("R1/cmd_vel", Twist, queue_size=1)
         self.img_sub = rospy.Subscriber("/R1/pi_camera/image_raw", Image, self.follow_path)
@@ -28,67 +18,48 @@ class driver():
         print("model loaded")
         self.bridge = CvBridge()
         self.twist = Twist()
+    
+    def processImg(self,img):
+        img[:, :, 0] = img[:, :, 1] # removes the Red 
+        img[:, :, 2] = img[:, :, 1] # and Blue Channels
+        img = img[400:, 200:1200]
+        shape = img.shape
+        img = cv2.resize(img, (int(shape[1]/5), int(shape[0]/5)), interpolation = cv2.INTER_CUBIC)
+        img = cv2.GaussianBlur(img,(5,5),0)
+        color_img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+        gray_img = cv2.cvtColor(color_img, cv2.COLOR_GRAY2BGR)
+        ret, img = cv2.threshold(gray_img,120,255,cv2.THRESH_BINARY_INV)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        return img
 
-    def load_model(self):
-        """
-        tmp = os.getcwd()
-        os.chdir("/home/fizzer/ros_ws/src/2020_competition/enph353/enph353_gazebo/nodes/")
-        with open('model_config.json') as json_file:
-            json_config = json_file.read()
-        new_model = tf.keras.models.model_from_json(json_config)
-
-            # Load weights
-        new_model.load_weights('weights_only.h5')
-        os.chdir(tmp)
-        """
+    def getOffset(self, img):
+        img = self.processImg(img)
+        M = cv2.moments(img)
         
-        return keras.models.load_model("LargerNN_driving_model.h5")
+        cX = int(M["m10"] / M["m00"])
+        cY = int(M["m01"] / M["m00"])
+        shape = img.shape
+        print(cX - shape[1]/2, cY - shape[0]/2)
+        cv2.circle(img, (cX, cY), 5, (0), -1)
+        cv2.putText(img, ".", (cX, cY),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+        cv2.imshow("Centroid", img)
 
+        return cX - shape[1]/2
+    
     def follow_path(self, img):
-        processed = self.imgProcessing(img)
-        global sess1
-        global graph1
-        prediction = None
-        with graph1.as_default():
-            set_session(sess1)
-            prediction = self.model.predict(processed)[0]
-            print(prediction)
+        offset = self.getOffset(img)
+        
+        P = 0.001
 
-        model_output = np.argmax(prediction)
-        if model_output == 0:
-            print("left")
-            self.twist.linear.x = 0.02
-            self.twist.angular.z = 0.2
-        elif model_output == 1:
-            print("straight")
-            self.twist.linear.x = 0.1
-            self.twist.angular.z = 0
-        elif model_output == 2:
-            print("right")
-            self.twist.linear.x = 0.02
-            self.twist.angular.z = -0.2
+        self.twist.linear.x = 0.1 - P*np.abs(offset)
+        self.twist.angluar.z = -10*P*offset
     
         self.twist_pub.publish(self.twist)
-        
-
-
-    def imgProcessing(self, img):
-        img = self.bridge.imgmsg_to_cv2(img, "bgr8")
-        cropped = img[375:]
-        shape = cropped.shape
-        compressed = cv2.resize(cropped, (int(shape[1]/5), int(shape[0]/5)), interpolation = cv2.INTER_CUBIC)
-        compressed = (compressed.astype(float) -128) / 128
-        # compressed[:, :, 0] = compressed[:, :, 2] # removes the green and blue channel i think
-        # compressed[:, :, 1] = compressed[:, :, 2]
-        # color_img = cv2.cvtColor(compressed, cv2.COLOR_RGB2GRAY)
-        # gray_img = cv2.cvtColor(color_img, cv2.COLOR_GRAY2BGR)
-        # ret,bin_img = cv2.threshold(gray_img,100,255,cv2.THRESH_BINARY)
-        return np.expand_dims(compressed, axis=0)
 
 #if __name__ == '__main__':
 print("starting Script")
 #os.chdir("/home/fizzer/Documents/ros_driving")
-d = driver()
+d = drivingController()
 rospy.init_node('driver', anonymous=True)
 try:
     rospy.spin()
