@@ -27,8 +27,7 @@ class drivingController():
         self.clear_count =0
         self.waited = False
     
-    def processImg(self,img):
-        
+    def processImg(self, img):
         # os.chdir("/home/fizzer/ros_ws/src/controller_pkg/imgs/")
         # # cv2.imwrite("img_" + str(self.img_num) + ".png", img)
         # self.img_num += 1
@@ -53,18 +52,11 @@ class drivingController():
         shape = img.shape
         try:
             cX = int(M["m10"] / M["m00"])
-            cY = int(M["m01"] / M["m00"])
+            # cY = int(M["m01"] / M["m00"])
         except:
-            fprint("Error finding Moment turn right")
+            fprint("Error finding Moment, turning right")
             return shape[1]/2
         
-        # print(cX - shape[1]/2, cY - shape[0]/2)
-        # cv2.circle(img, (cX, cY), 5, (0), -1)
-        # cv2.putText(img, ".", (cX, cY),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
-        # cv2.imshow("Centroid", img)
-        # cv2.waitKey(0)
-        # cv2.destroyAllWindows()
-        # cv2.waitKey(1)
         return cX - shape[1]/2
     
     def checkCrosswalk(self, img):
@@ -90,59 +82,62 @@ class drivingController():
             fprint("movement: " + str(np.sum(diff_img)))
             self.previous_img = img
             return np.sum(diff_img) < self.MOVEMENT_THRESHOLD
-        
+    
+    def twist_(self, x, z):
+        self.twist.linear.x = x
+        self.twist.linear.z = z
+        self.twist_pub.publish(self.twist)
 
-    def followPath(self, img):
-        img = self.bridge.imgmsg_to_cv2(img, "bgr8")
+    def crosswalkHandler(self, img):
         if self.checkCrosswalk(img):
-            # fprint("Stopping at crosswalk")
-            self.twist.linear.x = 0
-            self.twist.angular.z = 0
-            self.twist_pub.publish(self.twist)
+            self.twist_(0,0)
             if self.doneCrossing(img):
                 fprint("All clear " + str(self.clear_count))
                 self.clear_count += 1
                 if self.waited and self.clear_count < 25:
                     fprint("Waiting")
                     self.clear_count += 1
-                    return None
+                    return False
                 else:
                     fprint("Crossing")
-                    self.twist.linear.x = 0.5
-                    self.twist.angular.z = 0        
-                    self.twist_pub.publish(self.twist)
-                    sleep(0.75)
+                    self.twist_(0.5,0)
+                    sleep(0.75) # gives enough time for car to cross
                     self.clear_count = 0
                     self.waited = False
+                    return True
             else:
                 fprint("Waiting at Crosswalk")
                 self.waited = True
-                self.twist.linear.x = 0
-                self.twist.angular.z = 0
-                self.twist_pub.publish(self.twist)
+                self.twist_(0,0)
                 self.clear_count = 0
                 sleep(0.01)
-                return None
+                return False
+        else:
+            return True
+
+    def followPath(self, img):
+        img = self.bridge.imgmsg_to_cv2(img, "bgr8")
+        if not self.crosswalkHandler(img):
+            return None
 
         offset = self.getOffset(img)
         fprint(offset)
         P = 0.02
 
-        self.twist.linear.x = max(0.3 - P*np.abs(offset),0)
-        self.twist.angular.z = -P*offset
+        self.twist_(max(0.3 - P*np.abs(offset),0), -P*offset)
         # print("X: ", self.twist.linear.x)
         # print("Z: ", self.twist.angular.z)
-        self.twist_pub.publish(self.twist)
+
+
+
 
 #if __name__ == '__main__':
 fprint("starting Script")
-#os.chdir("/home/fizzer/Documents/ros_driving")
+
 d = drivingController()
 rospy.init_node('driver', anonymous=True)
+
 try:
-    # while True:
-    #     cv2.imshow("Centroid", d.img)
     rospy.spin()
 except KeyboardInterrupt:
     fprint("Stopping line_following") 
-    #     cv2.ims
