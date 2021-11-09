@@ -14,6 +14,9 @@ def fprint(s):
     print("Driving Module: ", + str(s))
 
 class drivingController():
+    MOVEMENT_THRESHOLD = 2000000
+    STOP_LINE_THRESHOLD = 2500000
+
     def __init__(self):
         self.twist_pub = rospy.Publisher("R1/cmd_vel", Twist, queue_size=1)
         self.img_sub = rospy.Subscriber("/R1/pi_camera/image_raw", Image, self.followPath)
@@ -65,13 +68,23 @@ class drivingController():
         shape = img.shape
         img = cv2.resize(img, (int(shape[1]/5), int(shape[0]/5)), interpolation = cv2.INTER_CUBIC)
         img = cv2.GaussianBlur(img, (55,55), cv2.BORDER_DEFAULT)
-        return np.sum(cv2.inRange((img[550:]),(0,0,200), (100,100,255))) > 250000
+        return np.sum(cv2.inRange((img[550:]),(0,0,200), (100,100,255))) > self.STOP_LINE_THRESHOLD
 
 
     def doneCrossing(self, img):
-
-        # TODO
-        return False
+        if self.previous_img is None:
+            shape = img.shape
+            img = cv2.resize(img, (int(shape[1]/5), int(shape[0]/5)), interpolation = cv2.INTER_CUBIC)
+            self.previous_img = cv2.GaussianBlur(img, (55,55), cv2.BORDER_DEFAULT)
+            return False
+        else:
+            shape = img.shape
+            img = cv2.resize(img, (int(shape[1]/5), int(shape[0]/5)), interpolation = cv2.INTER_CUBIC)
+            img = cv2.GaussianBlur(img, (55,55), cv2.BORDER_DEFAULT)
+            diff_img = img - self.previous_img
+            kernel = np.ones((3,5),np.uint8)
+            img = cv2.erode(diff_img, kernel,iterations = 1)
+            return np.sum(diff_img) > self.MOVEMENT_THRESHOLD
 
     def followPath(self, img):
         if self.checkCrosswalk(img):
@@ -82,6 +95,7 @@ class drivingController():
                 self.twist.linear.x = 0
                 self.twist.angular.z = 0
                 self.twist_pub.publish(self.twist)
+                sleep(0.05)
                 return None
 
         offset = self.getOffset(img)
