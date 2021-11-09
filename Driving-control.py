@@ -11,10 +11,10 @@ from geometry_msgs.msg import Twist
 import numpy as np
 
 def fprint(s):
-    print("Driving Module: ", + str(s))
+    print("Driving Module: " + str(s))
 
 class drivingController():
-    MOVEMENT_THRESHOLD = 2000000
+    MOVEMENT_THRESHOLD = 2500000
     STOP_LINE_THRESHOLD = 2500000
 
     def __init__(self):
@@ -23,9 +23,12 @@ class drivingController():
         self.img_num = 0
         self.bridge = CvBridge()
         self.twist = Twist()
+        self.previous_img = None
+        self.clear_count =0
+        self.waited = False
     
     def processImg(self,img):
-        img = self.bridge.imgmsg_to_cv2(img, "bgr8")
+        
         # os.chdir("/home/fizzer/ros_ws/src/controller_pkg/imgs/")
         # # cv2.imwrite("img_" + str(self.img_num) + ".png", img)
         # self.img_num += 1
@@ -55,7 +58,7 @@ class drivingController():
             fprint("error")
             return shape[1]/2
         
-        fprint(cX - shape[1]/2, cY - shape[0]/2)
+        print(cX - shape[1]/2, cY - shape[0]/2)
         cv2.circle(img, (cX, cY), 5, (0), -1)
         cv2.putText(img, ".", (cX, cY),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
         # cv2.imshow("Centroid", img)
@@ -64,11 +67,11 @@ class drivingController():
         # cv2.waitKey(1)
         return cX - shape[1]/2
     
-    def checkCrosswak(self, img):
-        shape = img.shape
-        img = cv2.resize(img, (int(shape[1]/5), int(shape[0]/5)), interpolation = cv2.INTER_CUBIC)
-        img = cv2.GaussianBlur(img, (55,55), cv2.BORDER_DEFAULT)
-        return np.sum(cv2.inRange((img[550:]),(0,0,200), (100,100,255))) > self.STOP_LINE_THRESHOLD
+    def checkCrosswalk(self, img):
+        # shape = img.shape
+        # img = cv2.resize(img, (int(shape[1]/5), int(shape[0]/5)), interpolation = cv2.INTER_CUBIC)
+        # img = cv2.GaussianBlur(img, (55,55), cv2.BORDER_DEFAULT)
+        return np.sum(cv2.inRange(img[550:], (0,0,200), (100,100,255))) > self.STOP_LINE_THRESHOLD
 
 
     def doneCrossing(self, img):
@@ -83,19 +86,42 @@ class drivingController():
             img = cv2.GaussianBlur(img, (55,55), cv2.BORDER_DEFAULT)
             diff_img = img - self.previous_img
             kernel = np.ones((3,5),np.uint8)
-            img = cv2.erode(diff_img, kernel,iterations = 1)
-            return np.sum(diff_img) > self.MOVEMENT_THRESHOLD
+            diff = cv2.erode(diff_img, kernel,iterations = 1)
+            fprint("movement: " + str(np.sum(diff_img)))
+            self.previous_img = img
+            return np.sum(diff_img) < self.MOVEMENT_THRESHOLD
+        
 
     def followPath(self, img):
+        img = self.bridge.imgmsg_to_cv2(img, "bgr8")
         if self.checkCrosswalk(img):
-            fprint("Stopping at crosswalk")
+            # fprint("Stopping at crosswalk")
+            self.twist.linear.x = 0
+            self.twist.angular.z = 0
+            self.twist_pub.publish(self.twist)
             if self.doneCrossing(img):
-                pass
+                fprint("All clear " + str(self.clear_count))
+                self.clear_count += 1
+                if self.waited and self.clear_count < 25:
+                    fprint("Waiting")
+                    self.clear_count += 1
+                    return None
+                else:
+                    fprint("Crossing")
+                    self.twist.linear.x = 0.5
+                    self.twist.angular.z = 0        
+                    self.twist_pub.publish(self.twist)
+                    sleep(0.75)
+                    self.clear_count = 0
+                    self.waited = False
             else:
+                fprint("Waiting at Crosswalk")
+                self.waited = True
                 self.twist.linear.x = 0
                 self.twist.angular.z = 0
                 self.twist_pub.publish(self.twist)
-                sleep(0.05)
+                self.clear_count = 0
+                sleep(0.01)
                 return None
 
         offset = self.getOffset(img)
@@ -104,8 +130,8 @@ class drivingController():
 
         self.twist.linear.x = max(0.3 - P*np.abs(offset),0)
         self.twist.angular.z = -P*offset
-        fprint("X: ", self.twist.linear.x)
-        fprint("Z: ", self.twist.angular.z)
+        # print("X: ", self.twist.linear.x)
+        # print("Z: ", self.twist.angular.z)
         self.twist_pub.publish(self.twist)
 
 #if __name__ == '__main__':
