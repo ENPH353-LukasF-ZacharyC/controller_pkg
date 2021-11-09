@@ -14,20 +14,31 @@ def fprint(s):
     print("Driving Module: " + str(s))
 
 class drivingController():
-    MOVEMENT_THRESHOLD = 2500000
-    STOP_LINE_THRESHOLD = 2500000
+    MOVEMENT_THRESHOLD = 2500000 # Summed number of pixel values where we can expect to see movement 
+    STOP_LINE_THRESHOLD = 2500000 # Summed number of red pixel values where we can expect to see a red stop line
 
     def __init__(self):
-        self.twist_pub = rospy.Publisher("R1/cmd_vel", Twist, queue_size=1)
-        self.img_sub = rospy.Subscriber("/R1/pi_camera/image_raw", Image, self.followPath)
-        self.img_num = 0
+        """
+        Initializes a new drivingController that subscribes to the robots camera feed and publishes movement controls 
+        @return None
+        @author Lukas
+        """
+        self.twist_pub = rospy.Publisher("R1/cmd_vel", Twist, queue_size=1) # Handles car communication
+        self.img_sub = rospy.Subscriber("/R1/pi_camera/image_raw", Image, self.followPath) # Handles car video feed
+        self.img_num = 0 # Stores how many images have been seen
         self.bridge = CvBridge()
-        self.twist = Twist()
-        self.previous_img = None
-        self.clear_count =0
-        self.waited = False
+        self.twist = Twist() # Car's velocity
+        self.previous_img = None # Previously seen image (used for motion detection not always up to date)
+        self.clear_count = 0 # Counts how many frames without movement have been seen   
+        self.waited = False # Stores whether the car is waiting at a cross walk or not
     
     def processImg(self, img):
+        """
+        grayscales the image from the green channel, crops, shrinks, blurs, binary filters an image
+
+        @return processed image
+        @author Lukas
+        """
         # os.chdir("/home/fizzer/ros_ws/src/controller_pkg/imgs/")
         # # cv2.imwrite("img_" + str(self.img_num) + ".png", img)
         # self.img_num += 1
@@ -47,6 +58,14 @@ class drivingController():
         return img
 
     def getOffset(self, img):
+        """
+        Checks how far the center of the road is from the center of the image
+
+        @return number of pixels that the center is off by 
+                (- means road center is to the left)
+                (+ means road center is to the right)
+        @author Lukas
+        """
         img = self.processImg(img)
         M = cv2.moments(img)
         shape = img.shape
@@ -60,18 +79,30 @@ class drivingController():
         return cX - shape[1]/2
     
     def checkCrosswalk(self, img):
+        """
+        Checks if there is a crosswalk stopline ahead 
+
+        @return True if there is one, False otherwise
+        @author Lukas
+        """
         # shape = img.shape
         # img = cv2.resize(img, (int(shape[1]/5), int(shape[0]/5)), interpolation = cv2.INTER_CUBIC)
         # img = cv2.GaussianBlur(img, (55,55), cv2.BORDER_DEFAULT)
         return np.sum(cv2.inRange(img[550:], (0,0,200), (100,100,255))) > self.STOP_LINE_THRESHOLD
 
 
-    def doneCrossing(self, img):
+    def checkMovement(self, img):
+        """
+        Checks if there is moment in an image
+        
+        @return True if there is movement, False otherwise
+        @author Lukas
+        """
         if self.previous_img is None:
             shape = img.shape
             img = cv2.resize(img, (int(shape[1]/5), int(shape[0]/5)), interpolation = cv2.INTER_CUBIC)
             self.previous_img = cv2.GaussianBlur(img, (55,55), cv2.BORDER_DEFAULT)
-            return False
+            return True
         else:
             shape = img.shape
             img = cv2.resize(img, (int(shape[1]/5), int(shape[0]/5)), interpolation = cv2.INTER_CUBIC)
@@ -81,15 +112,26 @@ class drivingController():
             diff = cv2.erode(diff_img, kernel,iterations = 1)
             fprint("movement: " + str(np.sum(diff_img)))
             self.previous_img = img
-            return np.sum(diff_img) < self.MOVEMENT_THRESHOLD
+            return np.sum(diff_img) > self.MOVEMENT_THRESHOLD
     
     def twist_(self, x, z):
+        """
+        Publishes the cars twist
+        @return None
+        @author Lukas
+        """
         self.twist.linear.x = x
         self.twist.linear.z = z
         self.twist_pub.publish(self.twist)
 
     def crosswalkHandler(self, img):
-        if self.checkCrosswalk(img):
+        """
+        Checks an image to see if there is a crosswalk, and if so controls the robot throught
+        without hitting a pedestrian 
+        @return None
+        @author Lukas
+        """
+        if not self.checkMovement(img):
             self.twist_(0,0)
             if self.doneCrossing(img):
                 fprint("All clear " + str(self.clear_count))
@@ -116,6 +158,11 @@ class drivingController():
             return True
 
     def followPath(self, img):
+        """
+        Takes the robots camera image and controls the robot to follow the road
+        @return None
+        @author Lukas
+        """
         img = self.bridge.imgmsg_to_cv2(img, "bgr8")
         if not self.crosswalkHandler(img):
             return None
