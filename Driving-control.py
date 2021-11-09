@@ -71,11 +71,16 @@ class drivingController():
         shape = img.shape
         try:
             cX = int(M["m10"] / M["m00"])
-            # cY = int(M["m01"] / M["m00"])
+            cY = int(M["m01"] / M["m00"])
         except:
             fprint("Error finding Moment, turning right")
             return shape[1]/2
-        
+        cv2.circle(img, (cX, cY), 5, (0), -1)
+        cv2.putText(img, ".", (cX, cY),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+        cv2.imshow("Road Following",img)
+        k = cv2.waitKey(1) & 0xFF
+        if k == 27:
+            cv2.destroyAllWindows()
         return cX - shape[1]/2
     
     def checkCrosswalk(self, img):
@@ -178,13 +183,13 @@ class drivingController():
 
 
 
-#if __name__ == '__main__':
-fprint("starting Script")
+if __name__ == '__main__':
+    fprint("starting Script")
 
-d = drivingController()
-rospy.init_node('driver', anonymous=True)
+    d = drivingController()
+    rospy.init_node('driver', anonymous=True)
 
-try:
-    rospy.spin()
-except KeyboardInterrupt:
-    fprint("Stopping line_following") 
+    try:
+        rospy.spin()
+    except KeyboardInterrupt:
+        fprint("Stopping line_following") 
