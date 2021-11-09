@@ -55,12 +55,12 @@ class drivingController():
             cX = int(M["m10"] / M["m00"])
             cY = int(M["m01"] / M["m00"])
         except:
-            fprint("error")
+            fprint("Error finding Moment turn right")
             return shape[1]/2
         
-        print(cX - shape[1]/2, cY - shape[0]/2)
-        cv2.circle(img, (cX, cY), 5, (0), -1)
-        cv2.putText(img, ".", (cX, cY),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+        # print(cX - shape[1]/2, cY - shape[0]/2)
+        # cv2.circle(img, (cX, cY), 5, (0), -1)
+        # cv2.putText(img, ".", (cX, cY),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
         # cv2.imshow("Centroid", img)
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
