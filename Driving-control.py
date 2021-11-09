@@ -10,13 +10,14 @@ from sensor_msgs.msg import Image
 from geometry_msgs.msg import Twist
 import numpy as np
 
+def fprint(s):
+    print("Driving Module: ", + str(s))
+
 class drivingController():
     def __init__(self):
         self.twist_pub = rospy.Publisher("R1/cmd_vel", Twist, queue_size=1)
-        self.img_sub = rospy.Subscriber("/R1/pi_camera/image_raw", Image, self.follow_path)
+        self.img_sub = rospy.Subscriber("/R1/pi_camera/image_raw", Image, self.followPath)
         self.img_num = 0
-
-        print("model loaded")
         self.bridge = CvBridge()
         self.twist = Twist()
     
@@ -48,10 +49,10 @@ class drivingController():
             cX = int(M["m10"] / M["m00"])
             cY = int(M["m01"] / M["m00"])
         except:
-            print("error")
+            fprint("error")
             return shape[1]/2
         
-        print(cX - shape[1]/2, cY - shape[0]/2)
+        fprint(cX - shape[1]/2, cY - shape[0]/2)
         cv2.circle(img, (cX, cY), 5, (0), -1)
         cv2.putText(img, ".", (cX, cY),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
         # cv2.imshow("Centroid", img)
@@ -60,19 +61,41 @@ class drivingController():
         # cv2.waitKey(1)
         return cX - shape[1]/2
     
-    def follow_path(self, img):
+    def checkCrosswak(self, img):
+        shape = img.shape
+        img = cv2.resize(img, (int(shape[1]/5), int(shape[0]/5)), interpolation = cv2.INTER_CUBIC)
+        img = cv2.GaussianBlur(img, (55,55), cv2.BORDER_DEFAULT)
+        return np.sum(cv2.inRange((img[550:]),(0,0,200), (100,100,255))) > 250000
+
+
+    def doneCrossing(self, img):
+
+        # TODO
+        return False
+
+    def followPath(self, img):
+        if self.checkCrosswalk(img):
+            fprint("Stopping at crosswalk")
+            if self.doneCrossing(img):
+                pass
+            else:
+                self.twist.linear.x = 0
+                self.twist.angular.z = 0
+                self.twist_pub.publish(self.twist)
+                return None
+
         offset = self.getOffset(img)
-        print(offset)
+        fprint(offset)
         P = 0.02
 
         self.twist.linear.x = max(0.3 - P*np.abs(offset),0)
         self.twist.angular.z = -P*offset
-        print("X: ", self.twist.linear.x)
-        print("Z: ", self.twist.angular.z)
+        fprint("X: ", self.twist.linear.x)
+        fprint("Z: ", self.twist.angular.z)
         self.twist_pub.publish(self.twist)
 
 #if __name__ == '__main__':
-print("starting Script")
+fprint("starting Script")
 #os.chdir("/home/fizzer/Documents/ros_driving")
 d = drivingController()
 rospy.init_node('driver', anonymous=True)
@@ -81,5 +104,5 @@ try:
     #     cv2.imshow("Centroid", d.img)
     rospy.spin()
 except KeyboardInterrupt:
-    print("Stopping line_following") 
+    fprint("Stopping line_following") 
     #     cv2.ims
