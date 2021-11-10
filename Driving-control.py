@@ -8,13 +8,15 @@ from cv_bridge import CvBridge, CvBridgeError
 #roslib.load_manifest('2020_competition')
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Twist
+
 import numpy as np
 
 def fprint(s):
     print("Driving Module: " + str(s))
 
 class drivingController():
-    MOVEMENT_THRESHOLD = 2500000 # Summed number of pixel values where we can expect to see movement 
+    MOVEMENT_THRESHOLD = 50000
+    STILL_THRESHOLD = 10000 # Summed number of pixel values where we can expect to see movement 
     STOP_LINE_THRESHOLD = 2500000 # Summed number of red pixel values where we can expect to see a red stop line
 
     def __init__(self):
@@ -113,11 +115,23 @@ class drivingController():
             img = cv2.resize(img, (int(shape[1]/5), int(shape[0]/5)), interpolation = cv2.INTER_CUBIC)
             img = cv2.GaussianBlur(img, (55,55), cv2.BORDER_DEFAULT)
             diff_img = img - self.previous_img
-            kernel = np.ones((3,5),np.uint8)
-            diff = cv2.erode(diff_img, kernel,iterations = 1)
+            kernel = np.ones((7,7),np.uint8)
+            diff_img = cv2.erode(diff_img, kernel,iterations = 1)
             fprint("movement: " + str(np.sum(diff_img)))
             self.previous_img = img
-            return np.sum(diff_img) > self.MOVEMENT_THRESHOLD
+            # s  = np.sum(diff_img)
+            # if np.sum(diff_img) > self.MOVEMENT_THRESHOLD:
+            #     print("movement: ", s)
+            # else:
+            #     print("No movement: ", s)
+
+            cv2.imshow("Movement",diff_img)
+            k = cv2.waitKey(1) & 0xFF
+            if k == 27:
+                cv2.destroyAllWindows()
+            if np.sum(diff_img) > self.MOVEMENT_THRESHOLD:
+                self.waited = True
+            return np.sum(diff_img) > self.STILL_THRESHOLD
     
     def twist_(self, x, z):
         """
@@ -126,41 +140,41 @@ class drivingController():
         @author Lukas
         """
         self.twist.linear.x = x
-        self.twist.linear.z = z
+        self.twist.angular.z = z
         self.twist_pub.publish(self.twist)
 
     def crosswalkHandler(self, img):
         """
         Checks an image to see if there is a crosswalk, and if so controls the robot throught
         without hitting a pedestrian 
-        @return None
+        @return True if at cross walk 
         @author Lukas
         """
-        if not self.checkMovement(img):
+        if self.checkCrosswalk(img):
             self.twist_(0,0)
-            if self.doneCrossing(img):
+            if not self.checkMovement(img):
                 fprint("All clear " + str(self.clear_count))
                 self.clear_count += 1
                 if self.waited and self.clear_count < 25:
                     fprint("Waiting")
                     self.clear_count += 1
-                    return False
+                    return True
                 else:
                     fprint("Crossing")
                     self.twist_(0.5,0)
-                    sleep(0.75) # gives enough time for car to cross
+                    rospy.sleep(0.6) # gives enough time for car to cross
                     self.clear_count = 0
                     self.waited = False
-                    return True
+                    return False
             else:
                 fprint("Waiting at Crosswalk")
                 self.waited = True
                 self.twist_(0,0)
                 self.clear_count = 0
                 sleep(0.01)
-                return False
+                return True
         else:
-            return True
+            return False
 
     def followPath(self, img):
         """
@@ -169,14 +183,15 @@ class drivingController():
         @author Lukas
         """
         img = self.bridge.imgmsg_to_cv2(img, "bgr8")
-        if not self.crosswalkHandler(img):
+        if self.crosswalkHandler(img):
             return None
 
         offset = self.getOffset(img)
         fprint(offset)
         P = 0.02
 
-        self.twist_(max(0.3 - P*np.abs(offset),0), -P*offset)
+        self.twist_(max(0.4 - P*np.abs(offset),0), -P*offset)
+        # print(self.twist)
         # print("X: ", self.twist.linear.x)
         # print("Z: ", self.twist.angular.z)
 
@@ -192,4 +207,5 @@ if __name__ == '__main__':
     try:
         rospy.spin()
     except KeyboardInterrupt:
+        cv2.destroyAllWindows()
         fprint("Stopping line_following") 
