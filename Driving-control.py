@@ -15,6 +15,7 @@ def fprint(s):
     print("Driving Module: " + str(s))
 
 class drivingController():
+    INTERSECTION_THRESHOLD = 2050000
     MOVEMENT_THRESHOLD = 50000
     STILL_THRESHOLD = 10000 # Summed number of pixel values where we can expect to see movement 
     STOP_LINE_THRESHOLD = 2500000 # Summed number of red pixel values where we can expect to see a red stop line
@@ -68,6 +69,7 @@ class drivingController():
                 (+ means road center is to the right)
         @author Lukas
         """
+        intersection = False
         img = self.processImg(img)
         M = cv2.moments(img)
         shape = img.shape
@@ -80,10 +82,18 @@ class drivingController():
         cv2.circle(img, (cX, cY), 5, (0), -1)
         cv2.putText(img, ".", (cX, cY),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
         cv2.imshow("Road Following",img)
+        s = np.sum(img)
+        if s > self.INTERSECTION_THRESHOLD:
+            fprint("Upcoming intersection")
+            intersection = True
+        else: 
+            fprint("On the road")
+            intersection = False
         k = cv2.waitKey(1) & 0xFF
         if k == 27:
             cv2.destroyAllWindows()
-        return cX - shape[1]/2
+        
+        return intersection, cX - shape[1]/2
     
     def checkCrosswalk(self, img):
         """
@@ -161,8 +171,8 @@ class drivingController():
                     return True
                 else:
                     fprint("Crossing")
-                    self.twist_(0.5,0)
-                    rospy.sleep(0.6) # gives enough time for car to cross
+                    self.twist_(0.5,0.3)
+                    rospy.sleep(0.75) # gives enough time for car to cross
                     self.clear_count = 0
                     self.waited = False
                     return False
@@ -186,11 +196,15 @@ class drivingController():
         if self.crosswalkHandler(img):
             return None
 
-        offset = self.getOffset(img)
+        intersection, offset = self.getOffset(img)
         fprint(offset)
-        P = 0.02
+        P = 0.01
 
-        self.twist_(max(0.4 - P*np.abs(offset),0), -P*offset)
+        az = -2*P*offset
+        lx = max(0.4 - P*np.abs(offset),0)
+        if intersection: 
+            az -= 0.5
+        self.twist_(lx , az)
         # print(self.twist)
         # print("X: ", self.twist.linear.x)
         # print("Z: ", self.twist.angular.z)
