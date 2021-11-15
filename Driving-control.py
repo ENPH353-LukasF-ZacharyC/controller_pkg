@@ -36,6 +36,7 @@ class drivingController():
         self.previous_img = None # Previously seen image (used for motion detection not always up to date)
         self.clear_count = 0 # Counts how many frames without movement have been seen   
         self.waited = False # Stores whether the car is waiting at a cross walk or not
+        self.cross_time = 0 
         
     
     def processImg(self, img):
@@ -174,8 +175,9 @@ class drivingController():
                     return True
                 else:
                     fprint("Crossing")
-                    self.twist_(0.5,0.3)
-                    rospy.sleep(0.75) # gives enough time for car to cross
+                    self.cross_time = rospy.get_rostime().secs
+                    # self.twist_(0.5,0.3)
+                    # rospy.sleep(0.75) # gives enough time for car to cross
                     self.clear_count = 0
                     self.waited = False
                     return False
@@ -201,7 +203,7 @@ class drivingController():
             fprint("No image found")
             return None
 
-        if self.crosswalkHandler(img):
+        if float(self.cross_time) + 0.75 > rospy.get_rostime.secs and self.crosswalkHandler(img):
             return None
 
         intersection, offset = self.getOffset(img)
@@ -226,12 +228,12 @@ if __name__ == '__main__':
     d = drivingController()
     rospy.init_node('driver', anonymous=True)
     d.twist_(0.05, 0.5)
-    d.lp_pub.publish(String('TeamRed,multi21,0,0000'))
+    d.lp_pub.publish('TeamRed,multi21,0,0000')
     rospy.sleep(0.1)
     
     try:
         rospy.spin()
     except KeyboardInterrupt:
-        
+
         cv2.destroyAllWindows()
         fprint("Stopping line_following") 
