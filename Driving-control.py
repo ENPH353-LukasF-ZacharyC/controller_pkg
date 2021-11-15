@@ -40,6 +40,14 @@ class drivingController():
         self.intersection_count = 0
         self.intersection_time = 0 
         self.timer = 0
+        self.start = False
+        start_time = rospy.get_rostime().secs
+        self.twist_(0,1)
+        self.start = True
+        while start_time + 1 > rospy.get_rostime().secs:
+            fprint(self.twist)
+
+        self.start = False
         # self.twist_(0.05, 0.25)
         # rospy.sleep(0.1)
         sleep(1)
@@ -161,6 +169,8 @@ class drivingController():
         @return None
         @author Lukas
         """
+        if self.start:
+            return none
         self.twist.linear.x = x
         self.twist.angular.z = z
         self.twist_pub.publish(self.twist)
@@ -207,7 +217,7 @@ class drivingController():
         """
         self.timer+=1
 
-        if(self.timer<-10):
+        if(self.timer>10000):
             d.lp_pub.publish('TeamRed,multi21,-1,0000')
             while True:
                 self.twist_(0,0)
@@ -250,14 +260,11 @@ if __name__ == '__main__':
     rospy.init_node('driver', anonymous=True)
     d = drivingController()
     d.lp_pub.publish('TeamRed,multi21,0,AA00')
-    start_time = rospy.get_rostime().secs
-    d.twist_(0.05,-1)
-    while start_time + 0.5 > rospy.get_rostime().secs:
-        pass
+    
 
     try:
         rospy.spin()
     except KeyboardInterrupt:
-
+        d.twist_(0,0)
         cv2.destroyAllWindows()
         fprint("Stopping line_following") 
