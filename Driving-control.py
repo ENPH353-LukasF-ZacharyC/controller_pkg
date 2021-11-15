@@ -12,8 +12,15 @@ from std_msgs.msg import String
 
 import numpy as np
 
+MODULE_NAME = "Driving Module"
+
 def fprint(*args):
-    print("Driving Module:" + " ".join(map(str,args)))
+    """
+    Custom print function that adds the module name to any print statements
+    @return None
+    @author Lukas
+    """
+    print(MODULE_NAME + ":" + " ".join(map(str,args)))
 
 class drivingController():
     INTERSECTION_THRESHOLD = 2050000
@@ -40,19 +47,21 @@ class drivingController():
         self.intersection_count = 0
         self.intersection_time = 0 
         self.timer = 0
-        self.start = False
-        start_time = rospy.get_rostime().secs
-        self.twist_(0,1)
-        self.start = True
-        while start_time + 1 > rospy.get_rostime().secs:
-            fprint(self.twist)
-
-        self.start = False
+        
+        sleep(1) # imporant for initializing publishers
+        self.startHandler()
         # self.twist_(0.05, 0.25)
         # rospy.sleep(0.1)
-        sleep(1)
         
-    
+        
+    def startHandler(self):
+        start_time = rospy.get_rostime().secs
+        self.twist_(0.4,1)
+        self.start = True
+        fprint("Starting")
+        while start_time + 3 > rospy.get_rostime().secs:
+            pass
+        self.start = False
 
 
     def processImg(self, img):
@@ -101,7 +110,7 @@ class drivingController():
             return shape[1]/2
         cv2.circle(img, (cX, cY), 5, (0), -1)
         cv2.putText(img, ".", (cX, cY),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
-        cv2.imshow("Road Following",img)
+        cv2.imshow("Road Following", cv2.resize(img,(int(shape[1]), int(shape[0])), interpolation = cv2.INTER_CUBIC))
         s = np.sum(img)
         if s > self.INTERSECTION_THRESHOLD:
             fprint("Upcoming intersection")
@@ -155,7 +164,7 @@ class drivingController():
             # else:
             #     print("No movement: ", s)
 
-            cv2.imshow("Movement",diff_img)
+            cv2.imshow("Movement", cv2.resize(diff_img, (int(shape[1]), int(shape[0])), interpolation = cv2.INTER_CUBIC))
             k = cv2.waitKey(1) & 0xFF
             if k == 27:
                 cv2.destroyAllWindows()
@@ -169,8 +178,6 @@ class drivingController():
         @return None
         @author Lukas
         """
-        if self.start:
-            return none
         self.twist.linear.x = x
         self.twist.angular.z = z
         self.twist_pub.publish(self.twist)
@@ -215,6 +222,9 @@ class drivingController():
         @return None
         @author Lukas
         """
+        if self.start:
+            return None
+
         self.timer+=1
 
         if(self.timer>10000):
