@@ -8,6 +8,7 @@ from cv_bridge import CvBridge, CvBridgeError
 #roslib.load_manifest('2020_competition')
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Twist
+from std_msgs.msg import String
 
 import numpy as np
 
@@ -26,6 +27,7 @@ class drivingController():
         @return None
         @author Lukas
         """
+        self.lp_pub = rospy.Publisher("/license_plate", String, queue_size=1)
         self.twist_pub = rospy.Publisher("R1/cmd_vel", Twist, queue_size=1) # Handles car communication
         self.img_sub = rospy.Subscriber("/R1/pi_camera/image_raw", Image, self.followPath) # Handles car video feed
         self.img_num = 0 # Stores how many images have been seen
@@ -37,6 +39,8 @@ class drivingController():
         # self.twist_(0.05, 0.25)
         # rospy.sleep(0.1)
     
+
+
     def processImg(self, img):
         """
         grayscales the image from the green channel, crops, shrinks, blurs, binary filters an image
@@ -204,7 +208,7 @@ class drivingController():
             return None
 
         intersection, offset = self.getOffset(img)
-        fprint(offset)
+        fprint(offset, rospy.get_rostime())
         P = 0.01
 
         az = -0.8*P*offset
@@ -223,12 +227,15 @@ if __name__ == '__main__':
     fprint("starting Script")
 
     rospy.init_node('driver', anonymous=True)
+    
     d = drivingController()
+    d.lp_pub.publish(String('TeamRed,multi21,0,0000'))
     d.twist_(0.05,-1)
     rospy.sleep(0.2)
 
     try:
         rospy.spin()
     except KeyboardInterrupt:
+        
         cv2.destroyAllWindows()
         fprint("Stopping line_following") 
