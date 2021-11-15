@@ -35,6 +35,7 @@ class drivingController():
         self.clear_count = 0 # Counts how many frames without movement have been seen   
         self.waited = False # Stores whether the car is waiting at a cross walk or not
         self.twist_(0.05, 0.25)
+        rospy.sleep(0.1)
     
     def processImg(self, img):
         """
@@ -198,6 +199,7 @@ class drivingController():
         except:
             fprint("No image found")
             return None
+
         if self.crosswalkHandler(img):
             return None
 
