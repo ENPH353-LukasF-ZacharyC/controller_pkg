@@ -258,7 +258,7 @@ class drivingController():
                 az += 0.5
     
         self.twist_(lx , az)
-        fprint(self.twist)
+        # fprint(self.twist)
         # print("X: ", self.twist.linear.x)
         # print("Z: ", self.twist.angular.z)
 
@@ -272,7 +272,6 @@ if __name__ == '__main__':
     d = drivingController()
     d.lp_pub.publish('TeamRed,multi21,0,AA00')
     
-
     try:
         rospy.spin()
     except KeyboardInterrupt:
