@@ -36,8 +36,12 @@ class drivingController():
         self.previous_img = None # Previously seen image (used for motion detection not always up to date)
         self.clear_count = 0 # Counts how many frames without movement have been seen   
         self.waited = False # Stores whether the car is waiting at a cross walk or not
+        self.timer = 0
         # self.twist_(0.05, 0.25)
         # rospy.sleep(0.1)
+        self.cross_time = 0
+        sleep(1)
+        
     
 
 
@@ -177,8 +181,9 @@ class drivingController():
                     return True
                 else:
                     fprint("Crossing")
-                    self.twist_(0.5,0.3)
-                    rospy.sleep(0.75) # gives enough time for car to cross
+                    self.cross_time = rospy.get_rostime().secs
+                    # self.twist_(0.5,0.3)
+                    # rospy.sleep(0.75) # gives enough time for car to cross
                     self.clear_count = 0
                     self.waited = False
                     return False
@@ -198,20 +203,25 @@ class drivingController():
         @return None
         @author Lukas
         """
+        self.timer+=1
+
+        if(self.timer>150):
+            d.lp_pub.publish('TeamRed,multi21,-1,0000')
+
         try:
             img = self.bridge.imgmsg_to_cv2(img, "bgr8")
         except:
             fprint("No image found")
             return None
 
-        if self.crosswalkHandler(img):
+        if float(self.cross_time) + 0.75 > rospy.get_rostime().secs and self.crosswalkHandler(img):
             return None
 
         intersection, offset = self.getOffset(img)
-        fprint(offset, rospy.get_rostime())
+        fprint(offset, rospy.get_rostime().secs)
         P = 0.01
 
-        az = -0.8*P*offset
+        az = -0.6*P*offset
         lx = max(0.4 - P*np.abs(offset),0)
         if intersection: 
             az -= 0.5
@@ -229,13 +239,13 @@ if __name__ == '__main__':
     rospy.init_node('driver', anonymous=True)
     
     d = drivingController()
-    d.lp_pub.publish(String('TeamRed,multi21,0,0000'))
+    d.lp_pub.publish('TeamRed,multi21,0,0000')
     d.twist_(0.05,-1)
     rospy.sleep(0.2)
 
     try:
         rospy.spin()
     except KeyboardInterrupt:
-        
+
         cv2.destroyAllWindows()
         fprint("Stopping line_following") 
