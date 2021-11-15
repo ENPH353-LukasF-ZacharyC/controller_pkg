@@ -36,10 +36,12 @@ class drivingController():
         self.previous_img = None # Previously seen image (used for motion detection not always up to date)
         self.clear_count = 0 # Counts how many frames without movement have been seen   
         self.waited = False # Stores whether the car is waiting at a cross walk or not
+        self.cross_time = 0 
+        self.intersection_count = 0
+        self.intersection_time = 0 
         self.timer = 0
         # self.twist_(0.05, 0.25)
         # rospy.sleep(0.1)
-        self.cross_time = 0
         sleep(1)
         
     
@@ -216,17 +218,24 @@ class drivingController():
             fprint("No image found")
             return None
 
-        if float(self.cross_time) + 0.75 > rospy.get_rostime().secs and self.crosswalkHandler(img):
-            return None
+        if float(self.cross_time) + 0.75 > rospy.get_rostime().secs:
+            if self.crosswalkHandler(img):
+                return None
 
         intersection, offset = self.getOffset(img)
-        fprint(offset, rospy.get_rostime().secs)
+        if intersection and self.intersection_time + 1 > rospy.get_rostime().secs:
+            self.intersection_count += 1
+        fprint(offset)
         P = 0.01
 
         az = -0.6*P*offset
         lx = max(0.4 - P*np.abs(offset),0)
-        if intersection: 
-            az -= 0.5
+        if intersection:
+            if self.intersection_count < 4:
+                az -= 0.5
+            else: 
+                az += 0.5
+    
         self.twist_(lx , az)
         fprint(self.twist)
         # print("X: ", self.twist.linear.x)
@@ -239,11 +248,12 @@ if __name__ == '__main__':
     fprint("starting Script")
 
     rospy.init_node('driver', anonymous=True)
-    
     d = drivingController()
-    d.lp_pub.publish('TeamRed,multi21,0,0000')
+    d.lp_pub.publish('TeamRed,multi21,0,AA00')
+    start_time = rospy.get_rostime().secs
     d.twist_(0.05,-1)
-    rospy.sleep(0.2)
+    while start_time + 0.5 > rospy.get_rostime().secs:
+        pass
 
     try:
         rospy.spin()
