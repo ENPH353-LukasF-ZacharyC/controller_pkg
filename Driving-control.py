@@ -34,8 +34,8 @@ class drivingController():
         self.previous_img = None # Previously seen image (used for motion detection not always up to date)
         self.clear_count = 0 # Counts how many frames without movement have been seen   
         self.waited = False # Stores whether the car is waiting at a cross walk or not
-        self.twist_(0.05, 0.25)
-        rospy.sleep(0.1)
+        # self.twist_(0.05, 0.25)
+        # rospy.sleep(0.1)
     
     def processImg(self, img):
         """
@@ -207,7 +207,7 @@ class drivingController():
         fprint(offset)
         P = 0.01
 
-        az = -2*P*offset
+        az = -0.8*P*offset
         lx = max(0.4 - P*np.abs(offset),0)
         if intersection: 
             az -= 0.5
@@ -222,8 +222,10 @@ class drivingController():
 if __name__ == '__main__':
     fprint("starting Script")
 
-    d = drivingController()
     rospy.init_node('driver', anonymous=True)
+    d = drivingController()
+    d.twist_(0.05,-1)
+    rospy.sleep(0.2)
 
     try:
         rospy.spin()
