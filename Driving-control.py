@@ -27,6 +27,7 @@ class drivingController():
     MOVEMENT_THRESHOLD = 50000
     STILL_THRESHOLD = 10000 # Summed number of pixel values where we can expect to see movement 
     STOP_LINE_THRESHOLD = 2500000 # Summed number of red pixel values where we can expect to see a red stop line
+    RUN_TIME = 60 # How many seconds the car should be running for
 
     def __init__(self):
         """
@@ -43,13 +44,14 @@ class drivingController():
         self.previous_img = None # Previously seen image (used for motion detection not always up to date)
         self.clear_count = 0 # Counts how many frames without movement have been seen   
         self.waited = False # Stores whether the car is waiting at a cross walk or not
-        self.cross_time = 0 
-        self.intersection_count = 0
-        self.intersection_time = 0 
-        self.timer = 0
+        self.cross_time = 0 # Stores the time the car started to cross a crosswalk at
+        self.intersection_count = 0 # Stores how many intersections the car has gone through 
+        self.intersection_time = 0 # Stores the time the car started going throught an intersection
         
         sleep(1) # imporant for initializing publishers
-        self.startHandler()
+        self.start_time = rospy.get_rostime().secs # Stores how long the car has been going for
+
+        self.startHandler() # Handles the starting intersection of the car
         # self.twist_(0.05, 0.25)
         # rospy.sleep(0.1)
         
@@ -110,7 +112,7 @@ class drivingController():
             return shape[1]/2
         cv2.circle(img, (cX, cY), 5, (0), -1)
         cv2.putText(img, ".", (cX, cY),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
-        cv2.imshow("Road Following", cv2.resize(img,(int(shape[1]), int(shape[0])), interpolation = cv2.INTER_CUBIC))
+        cv2.imshow("Road Following", cv2.resize(img,(int(shape[1]/2), int(shape[0]/2)), interpolation = cv2.INTER_CUBIC))
         s = np.sum(img)
         if s > self.INTERSECTION_THRESHOLD:
             fprint("Upcoming intersection")
@@ -164,7 +166,7 @@ class drivingController():
             # else:
             #     print("No movement: ", s)
 
-            cv2.imshow("Movement", cv2.resize(diff_img, (int(shape[1]), int(shape[0])), interpolation = cv2.INTER_CUBIC))
+            cv2.imshow("Movement", cv2.resize(diff_img, (int(shape[1]/2), int(shape[0]/2)), interpolation = cv2.INTER_CUBIC))
             k = cv2.waitKey(1) & 0xFF
             if k == 27:
                 cv2.destroyAllWindows()
@@ -225,9 +227,8 @@ class drivingController():
         if self.start:
             return None
 
-        self.timer+=1
 
-        if(self.timer>10000):
+        if self.start_time + self.RUN_TIME  < rospy.get_rostime() :
             d.lp_pub.publish('TeamRed,multi21,-1,0000')
             while True:
                 self.twist_(0,0)
