@@ -205,8 +205,10 @@ class drivingController():
         """
         self.timer+=1
 
-        if(self.timer>150):
+        if(self.timer<-10):
             d.lp_pub.publish('TeamRed,multi21,-1,0000')
+            while True:
+                self.twist_(0,0)
 
         try:
             img = self.bridge.imgmsg_to_cv2(img, "bgr8")
