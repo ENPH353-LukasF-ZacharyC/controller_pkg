@@ -34,6 +34,7 @@ class drivingController():
         self.previous_img = None # Previously seen image (used for motion detection not always up to date)
         self.clear_count = 0 # Counts how many frames without movement have been seen   
         self.waited = False # Stores whether the car is waiting at a cross walk or not
+        self.twist_(0.05, 0.25)
     
     def processImg(self, img):
         """
@@ -192,7 +193,11 @@ class drivingController():
         @return None
         @author Lukas
         """
-        img = self.bridge.imgmsg_to_cv2(img, "bgr8")
+        try:
+            img = self.bridge.imgmsg_to_cv2(img, "bgr8")
+        except:
+            fprint("No image found")
+            return None
         if self.crosswalkHandler(img):
             return None
 
