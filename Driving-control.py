@@ -11,8 +11,8 @@ from geometry_msgs.msg import Twist
 
 import numpy as np
 
-def fprint(s):
-    print("Driving Module: " + str(s))
+def fprint(*args):
+    print("Driving Module:" + " ".join(map(str,args)))
 
 class drivingController():
     INTERSECTION_THRESHOLD = 2050000
@@ -205,7 +205,7 @@ class drivingController():
         if intersection: 
             az -= 0.5
         self.twist_(lx , az)
-        # print(self.twist)
+        fprint(self.twist)
         # print("X: ", self.twist.linear.x)
         # print("Z: ", self.twist.angular.z)
 
