@@ -39,8 +39,14 @@ class drivingController():
         self.cross_time = 0 
         self.intersection_count = 0
         self.intersection_time = 0 
+        self.timer = 0
+        # self.twist_(0.05, 0.25)
+        # rospy.sleep(0.1)
+        sleep(1)
         
     
+
+
     def processImg(self, img):
         """
         grayscales the image from the green channel, crops, shrinks, blurs, binary filters an image
@@ -199,6 +205,11 @@ class drivingController():
         @return None
         @author Lukas
         """
+        self.timer+=1
+
+        if(self.timer>150):
+            d.lp_pub.publish('TeamRed,multi21,-1,0000')
+
         try:
             img = self.bridge.imgmsg_to_cv2(img, "bgr8")
         except:
@@ -215,7 +226,7 @@ class drivingController():
         fprint(offset)
         P = 0.01
 
-        az = -2*P*offset
+        az = -0.6*P*offset
         lx = max(0.4 - P*np.abs(offset),0)
         if intersection:
             if self.intersection_count < 4:
@@ -234,14 +245,14 @@ class drivingController():
 if __name__ == '__main__':
     fprint("starting Script")
 
-    d = drivingController()
     rospy.init_node('driver', anonymous=True)
-    d.twist_(0.05, 0.5)
+    d = drivingController()
     d.lp_pub.publish('TeamRed,multi21,0,AA00')
     start_time = rospy.get_rostime().secs
+    d.twist_(0.05,-1)
     while start_time + 0.5 > rospy.get_rostime().secs:
         pass
-    
+
     try:
         rospy.spin()
     except KeyboardInterrupt:
