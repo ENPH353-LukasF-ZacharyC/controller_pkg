@@ -12,14 +12,22 @@ from std_msgs.msg import String
 
 import numpy as np
 
+MODULE_NAME = "Driving Module"
+
 def fprint(*args):
-    print("Driving Module:" + " ".join(map(str,args)))
+    """
+    Custom print function that adds the module name to any print statements
+    @return None
+    @author Lukas
+    """
+    print(MODULE_NAME + ":" + " ".join(map(str,args)))
 
 class drivingController():
     INTERSECTION_THRESHOLD = 2050000
     MOVEMENT_THRESHOLD = 50000
     STILL_THRESHOLD = 10000 # Summed number of pixel values where we can expect to see movement 
     STOP_LINE_THRESHOLD = 2500000 # Summed number of red pixel values where we can expect to see a red stop line
+    RUN_TIME = 60 # How many seconds the car should be running for
 
     def __init__(self):
         """
@@ -36,6 +44,7 @@ class drivingController():
         self.previous_img = None # Previously seen image (used for motion detection not always up to date)
         self.clear_count = 0 # Counts how many frames without movement have been seen   
         self.waited = False # Stores whether the car is waiting at a cross walk or not
+<<<<<<< HEAD
         self.cross_time = 0 
         self.intersection_count = 0
         self.intersection_time = 0 
@@ -47,12 +56,28 @@ class drivingController():
         self.start = True
         while start_time + 3 > rospy.get_rostime().secs:
             fprint("STARTING TURN :^(")
+=======
+        self.cross_time = 0 # Stores the time the car started to cross a crosswalk at
+        self.intersection_count = 0 # Stores how many intersections the car has gone through 
+        self.intersection_time = 0 # Stores the time the car started going throught an intersection
+        
+        sleep(1) # imporant for initializing publishers
+        self.start_time = rospy.get_rostime().secs # Stores how long the car has been going for
+>>>>>>> 43e5ff240ebed58a9be291ef8cefe2585969481a
 
-        self.start = False
+        self.startHandler() # Handles the starting intersection of the car
         # self.twist_(0.05, 0.25)
         # rospy.sleep(0.1)
         
-    
+        
+    def startHandler(self):
+        start_time = rospy.get_rostime().secs
+        self.twist_(0.4,1)
+        self.start = True
+        fprint("Starting")
+        while start_time + 3 > rospy.get_rostime().secs:
+            pass
+        self.start = False
 
 
     def processImg(self, img):
@@ -101,7 +126,7 @@ class drivingController():
             return shape[1]/2
         cv2.circle(img, (cX, cY), 5, (0), -1)
         cv2.putText(img, ".", (cX, cY),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
-        cv2.imshow("Road Following",img)
+        cv2.imshow("Road Following", cv2.resize(img,(int(shape[1]/2), int(shape[0]/2)), interpolation = cv2.INTER_CUBIC))
         s = np.sum(img)
         if s > self.INTERSECTION_THRESHOLD:
             fprint("Upcoming intersection")
@@ -155,7 +180,7 @@ class drivingController():
             # else:
             #     print("No movement: ", s)
 
-            cv2.imshow("Movement",diff_img)
+            cv2.imshow("Movement", cv2.resize(diff_img, (int(shape[1]/2), int(shape[0]/2)), interpolation = cv2.INTER_CUBIC))
             k = cv2.waitKey(1) & 0xFF
             if k == 27:
                 cv2.destroyAllWindows()
@@ -169,8 +194,6 @@ class drivingController():
         @return None
         @author Lukas
         """
-        if self.start:
-            return none
         self.twist.linear.x = x
         self.twist.angular.z = z
         self.twist_pub.publish(self.twist)
@@ -215,9 +238,15 @@ class drivingController():
         @return None
         @author Lukas
         """
-        self.timer+=1
+        if self.start:
+            return None
 
+<<<<<<< HEAD
         if(self.timer>20000):
+=======
+
+        if self.start_time + self.RUN_TIME  < rospy.get_rostime() :
+>>>>>>> 43e5ff240ebed58a9be291ef8cefe2585969481a
             d.lp_pub.publish('TeamRed,multi21,-1,0000')
             while True:
                 self.twist_(0,0)
@@ -247,7 +276,7 @@ class drivingController():
                 az += 0.5
     
         self.twist_(lx , az)
-        fprint(self.twist)
+        # fprint(self.twist)
         # print("X: ", self.twist.linear.x)
         # print("Z: ", self.twist.angular.z)
 
@@ -261,7 +290,6 @@ if __name__ == '__main__':
     d = drivingController()
     d.lp_pub.publish('TeamRed,multi21,0,AA00')
     
-
     try:
         rospy.spin()
     except KeyboardInterrupt:
