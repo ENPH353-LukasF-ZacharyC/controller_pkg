@@ -40,17 +40,17 @@ class drivingController():
         self.intersection_count = 0
         self.intersection_time = 0 
         self.timer = 0
+        sleep(1)
         self.start = False
         start_time = rospy.get_rostime().secs
-        self.twist_(0,1)
+        self.twist_(0.4,1)
         self.start = True
-        while start_time + 1 > rospy.get_rostime().secs:
-            fprint(self.twist)
+        while start_time + 3 > rospy.get_rostime().secs:
+            fprint("STARTING TURN :^(")
 
         self.start = False
         # self.twist_(0.05, 0.25)
         # rospy.sleep(0.1)
-        sleep(1)
         
     
 
@@ -217,7 +217,7 @@ class drivingController():
         """
         self.timer+=1
 
-        if(self.timer>10000):
+        if(self.timer>20000):
             d.lp_pub.publish('TeamRed,multi21,-1,0000')
             while True:
                 self.twist_(0,0)
