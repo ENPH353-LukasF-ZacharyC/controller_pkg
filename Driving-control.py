@@ -283,7 +283,7 @@ class drivingController():
 
 if __name__ == '__main__':
     fprint("starting Script")
-
+    fprint("New Diriving ")
     rospy.init_node('driver', anonymous=True)
     d = drivingController()
     d.lp_pub.publish('TeamRed,multi21,0,AA00')
