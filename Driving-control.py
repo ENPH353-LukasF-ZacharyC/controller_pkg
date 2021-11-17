@@ -272,18 +272,16 @@ class drivingController():
             az -= 0.5
             # else: 
                 # az += 0.5
+        if self.cross_time + 1 > rospy.get_rostime():
+            lx = max(lx, 0.1)
     
         self.twist_(lx , az)
-        # fprint(self.twist)
-        # print("X: ", self.twist.linear.x)
-        # print("Z: ", self.twist.angular.z)
-
 
 
 
 if __name__ == '__main__':
     fprint("starting Script")
-    fprint("New Diriving ")
+    fprint("New Branch")
     rospy.init_node('driver', anonymous=True)
     d = drivingController()
     d.lp_pub.publish('TeamRed,multi21,0,AA00')
