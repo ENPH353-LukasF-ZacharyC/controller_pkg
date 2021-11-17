@@ -44,26 +44,15 @@ class drivingController():
         self.previous_img = None # Previously seen image (used for motion detection not always up to date)
         self.clear_count = 0 # Counts how many frames without movement have been seen   
         self.waited = False # Stores whether the car is waiting at a cross walk or not
-<<<<<<< HEAD
-        self.cross_time = 0 
-        self.intersection_count = 0
-        self.intersection_time = 0 
-        self.timer = 0
-        sleep(1)
+
         self.start = False
-        start_time = rospy.get_rostime().secs
-        self.twist_(0.4,1)
-        self.start = True
-        while start_time + 3 > rospy.get_rostime().secs:
-            fprint("STARTING TURN :^(")
-=======
         self.cross_time = 0 # Stores the time the car started to cross a crosswalk at
         self.intersection_count = 0 # Stores how many intersections the car has gone through 
         self.intersection_time = 0 # Stores the time the car started going throught an intersection
         
         sleep(1) # imporant for initializing publishers
+        
         self.start_time = rospy.get_rostime().secs # Stores how long the car has been going for
->>>>>>> 43e5ff240ebed58a9be291ef8cefe2585969481a
 
         self.startHandler() # Handles the starting intersection of the car
         # self.twist_(0.05, 0.25)
@@ -241,12 +230,9 @@ class drivingController():
         if self.start:
             return None
 
-<<<<<<< HEAD
-        if(self.timer>20000):
-=======
+
 
         if self.start_time + self.RUN_TIME  < rospy.get_rostime() :
->>>>>>> 43e5ff240ebed58a9be291ef8cefe2585969481a
             d.lp_pub.publish('TeamRed,multi21,-1,0000')
             while True:
                 self.twist_(0,0)
