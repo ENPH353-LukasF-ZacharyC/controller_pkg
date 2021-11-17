@@ -30,4 +30,10 @@ With pedestrian sometimes stops in the middle of the crosswalk or tries to cross
 
 ## Nov 16, 2021
 Time Trials Tomorrow
-- Driving 
+### Center Loop ideas
+- Use a NN to detect if the truck is too close (I think this is the most interesting choice and will be looking into it) 
+  - Use imitation learning: have someone drive around the center loop and record whether they are moving forward or not, if not moving forward then the car is infront of them
+    - Might have issues with corners where you are turning
+- Cant use Motion detection because the car will also be using. Unless we can find a way to track 2 images to overlay each other
+- SIFT to recognize the back and side of the truck.
+- 
