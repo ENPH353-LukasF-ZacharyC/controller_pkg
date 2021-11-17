@@ -23,11 +23,14 @@ def fprint(*args):
     print(MODULE_NAME + ":" + " ".join(map(str,args)))
 
 class drivingController():
-    INTERSECTION_THRESHOLD = 2050000
+    INTERSECTION_THRESHOLD = 2200000
     MOVEMENT_THRESHOLD = 50000
     STILL_THRESHOLD = 10000 # Summed number of pixel values where we can expect to see movement 
-    STOP_LINE_THRESHOLD = 2500000 # Summed number of red pixel values where we can expect to see a red stop line
+    STOP_LINE_THRESHOLD = 1500000 # Summed number of red pixel values where we can expect to see a red stop line
     RUN_TIME = 60 # How many seconds the car should be running for
+    CROSSWALK_TIME = 5
+    INTERSECTION_TIME = 5
+
 
     def __init__(self):
         """
@@ -44,14 +47,14 @@ class drivingController():
         self.previous_img = None # Previously seen image (used for motion detection not always up to date)
         self.clear_count = 0 # Counts how many frames without movement have been seen   
         self.waited = False # Stores whether the car is waiting at a cross walk or not
-
-        self.start = False
+        self.stop_time = 0 
+        self.start = True
         self.cross_time = 0 # Stores the time the car started to cross a crosswalk at
         self.intersection_count = 0 # Stores how many intersections the car has gone through 
         self.intersection_time = 0 # Stores the time the car started going throught an intersection
-        
+        self.start_time = rospy.get_rostime().secs
         sleep(1) # imporant for initializing publishers
-        
+
         self.start_time = rospy.get_rostime().secs # Stores how long the car has been going for
 
         self.startHandler() # Handles the starting intersection of the car
@@ -64,7 +67,7 @@ class drivingController():
         self.twist_(0.4,1)
         self.start = True
         fprint("Starting")
-        while start_time + 3 > rospy.get_rostime().secs:
+        while start_time + 1 > rospy.get_rostime().secs:
             pass
         self.start = False
 
@@ -139,7 +142,9 @@ class drivingController():
         # shape = img.shape
         # img = cv2.resize(img, (int(shape[1]/5), int(shape[0]/5)), interpolation = cv2.INTER_CUBIC)
         # img = cv2.GaussianBlur(img, (55,55), cv2.BORDER_DEFAULT)
-        return np.sum(cv2.inRange(img[550:], (0,0,200), (100,100,255))) > self.STOP_LINE_THRESHOLD
+        n =  np.sum(cv2.inRange(img[550:], (0,0,200), (100,100,255)))
+        # fprint("Crosswalk handler: ", n)
+        return n > self.STOP_LINE_THRESHOLD
 
 
     def checkMovement(self, img):
@@ -163,17 +168,17 @@ class drivingController():
             diff_img = cv2.erode(diff_img, kernel,iterations = 1)
             fprint("movement: " + str(np.sum(diff_img)))
             self.previous_img = img
-            # s  = np.sum(diff_img)
-            # if np.sum(diff_img) > self.MOVEMENT_THRESHOLD:
-            #     print("movement: ", s)
-            # else:
-            #     print("No movement: ", s)
+            s  = np.sum(diff_img)
+            if s > self.MOVEMENT_THRESHOLD:
+                fprint("movement: ", s)
+            else:
+                fprint("No movement: ", s)
 
             cv2.imshow("Movement", cv2.resize(diff_img, (int(shape[1]/2), int(shape[0]/2)), interpolation = cv2.INTER_CUBIC))
             k = cv2.waitKey(1) & 0xFF
             if k == 27:
                 cv2.destroyAllWindows()
-            if np.sum(diff_img) > self.MOVEMENT_THRESHOLD:
+            if np.sum(diff_img) > self.MOVEMENT_THRESHOLD * 5 and self.stop_time + 1 < rospy.get_rostime().secs:
                 self.waited = True
             return np.sum(diff_img) > self.STILL_THRESHOLD
     
@@ -213,6 +218,8 @@ class drivingController():
                     return False
             else:
                 fprint("Waiting at Crosswalk")
+                if self.stop_time + 5 < rospy.get_rostime().secs:
+                    self.stop_time = rospy.get_rostime().secs
                 self.waited = True
                 self.twist_(0,0)
                 self.clear_count = 0
@@ -231,11 +238,14 @@ class drivingController():
             return None
 
 
-
-        if self.start_time + self.RUN_TIME  < rospy.get_rostime() :
+        
+        if self.start_time + self.RUN_TIME  < rospy.get_rostime().secs:
             d.lp_pub.publish('TeamRed,multi21,-1,0000')
-            while True:
-                self.twist_(0,0)
+            fprint("Timed Out; Ending Script")
+            self.twist_(0,0)
+            self.img_sub.unregister() 
+            raise KeyboardInterrupt     
+
 
         try:
             img = self.bridge.imgmsg_to_cv2(img, "bgr8")
@@ -243,23 +253,25 @@ class drivingController():
             fprint("No image found")
             return None
 
-        if float(self.cross_time) + 0.75 > rospy.get_rostime().secs:
+        if self.cross_time + self.CROSSWALK_TIME < rospy.get_rostime().secs:
             if self.crosswalkHandler(img):
                 return None
 
         intersection, offset = self.getOffset(img)
-        if intersection and self.intersection_time + 1 > rospy.get_rostime().secs:
-            self.intersection_count += 1
+        # if intersection and self.intersection_time + self.INTERSECTION_TIME < rospy.get_rostime().secs:
+        #     self.intersection_time = rospy.get_rostime().secs
+        #     self.intersection_count += 1
+        #     fprint("Intersection Count: ", self.intersection_count)
         fprint(offset)
         P = 0.01
 
-        az = -0.6*P*offset
-        lx = max(0.4 - P*np.abs(offset),0)
+        az = -2*P*offset
+        lx = max(0.5 - P*np.abs(offset),0)
         if intersection:
-            if self.intersection_count < 4:
-                az -= 0.5
-            else: 
-                az += 0.5
+            # if self.intersection_count < 4:
+            az -= 0.5
+            # else: 
+                # az += 0.5
     
         self.twist_(lx , az)
         # fprint(self.twist)
