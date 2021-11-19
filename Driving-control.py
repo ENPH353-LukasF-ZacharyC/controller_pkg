@@ -8,6 +8,7 @@ from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Twist
 from std_msgs.msg import String
+from ParkedCar import *
 
 import numpy as np
 
@@ -19,7 +20,7 @@ def fprint(*args):
     @return None
     @author Lukas
     """
-    print(MODULE_NAME + ": " + " ".join(map(str,args)))
+    # print(MODULE_NAME + ": " + " ".join(map(str,args)))
 
 class drivingController():
     INTERSECTION_THRESHOLD = 1000000
@@ -255,7 +256,7 @@ class drivingController():
         except:
             fprint("No image found")
             return None
-
+        lp = get_car_back(img)
         if self.cross_time + self.CROSSWALK_TIME < rospy.get_rostime().secs:
             if self.crosswalkHandler(img):
                 return None

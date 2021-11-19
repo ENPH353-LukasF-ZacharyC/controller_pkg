@@ -1,7 +1,18 @@
 import cv2
 import numpy as np
 
-def get_license_plates(locb):
+MODULE_NAME = "Car Finding"
+
+def fprint(*args):
+    """
+    Custom print function that adds the module name to any print statements
+    @return None
+    @author Lukas
+    """
+    print(MODULE_NAME + ": " + " ".join(map(str,args)))
+
+def get_license_plates(img):
+    locb = get_car_back(img)
     lolp = []
     for img in locb:
         i = img
@@ -12,15 +23,16 @@ def get_license_plates(locb):
         img = cv2.erode(img, kernel, iterations = 1)
         img = cv2.dilate(img,kernel, iterations= 3)
         canny = (cv2.Canny(img, 0, 50, apertureSize=5))
-        contours, _hierarchy = cv2.findContours(canny, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+        _, contours, _hierarchy = cv2.findContours(canny, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
         squares = []
         for cnt in contours:
                     cnt_len = cv2.arcLength(cnt, True)
                     cnt = cv2.approxPolyDP(cnt, 0.02*cnt_len, True)
                     if len(cnt) == 4 and cv2.isContourConvex(cnt) and cv2.contourArea(cnt) > 5000:
-                        print(cv2.contourArea(cnt))
+                        fprint(cv2.contourArea(cnt))
                         squares.append(cnt)
         for s in squares:
+            fprint("Found LP")
             pts1 = corner_sorter(s)
             pts2 = np.float32([[0,0],[100,0],[0,30],[100,30]])
             M = cv2.getPerspectiveTransform(pts1,pts2)
@@ -39,25 +51,30 @@ def get_car_back(img):
     img = cv2.erode(img, kernel, iterations = 1)
     img = cv2.dilate(img,kernel, iterations= 2)
     canny = (cv2.Canny(img, 0, 50, apertureSize=5))
-    contours, _hierarchy = cv2.findContours(canny, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    cv2.imshow("canny", canny)
+
+    _, contours, _hierarchy = cv2.findContours(canny, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
     squares = []
     for cnt in contours:
         cnt_len = cv2.arcLength(cnt, True)
         cnt = cv2.approxPolyDP(cnt, 0.02*cnt_len, True)
         if len(cnt) == 4 and cv2.isContourConvex(cnt) and cv2.contourArea(cnt) > 10000:
+            print(cv2.contourArea(cnt))
             squares.append(cnt)
     for s in squares:
+        print("/n Found Car back /n")
         pts1 = corner_sorter(s)
         pts2 = np.float32([[0,0],[150,0],[0,150],[150,150]])
         M = cv2.getPerspectiveTransform(pts1,pts2)
         dst = cv2.warpPerspective(i,M,(150,150)) 
         carBacks.append(dst)
+        cv2.imshow("car back", dst)
     return carBacks
 
 def corner_sorter(lop):
     lop = list(lop)
-    print(lop[0][0])
+    fprint(lop[0][0])
     s = sorted(lop, key = lambda x : x[0][0])
     left = sorted(s[:2], key = lambda x : x[0][1])
     right = sorted(s[2:], key = lambda x : x[0][1])
