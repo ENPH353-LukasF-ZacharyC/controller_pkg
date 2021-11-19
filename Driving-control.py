@@ -5,7 +5,6 @@ from time import sleep
 import roslib
 import cv2
 from cv_bridge import CvBridge, CvBridgeError
-#roslib.load_manifest('2020_competition')
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Twist
 from std_msgs.msg import String
@@ -20,14 +19,14 @@ def fprint(*args):
     @return None
     @author Lukas
     """
-    print(MODULE_NAME + ":" + " ".join(map(str,args)))
+    print(MODULE_NAME + ": " + " ".join(map(str,args)))
 
 class drivingController():
-    INTERSECTION_THRESHOLD = 2200000
+    INTERSECTION_THRESHOLD = 1000000
     MOVEMENT_THRESHOLD = 50000
     STILL_THRESHOLD = 10000 # Summed number of pixel values where we can expect to see movement 
     STOP_LINE_THRESHOLD = 1500000 # Summed number of red pixel values where we can expect to see a red stop line
-    RUN_TIME = 60 # How many seconds the car should be running for
+    RUN_TIME = 1000 # How many seconds the car should be running for
     CROSSWALK_TIME = 5
     INTERSECTION_TIME = 5
 
@@ -115,11 +114,12 @@ class drivingController():
             cY = int(M["m01"] / M["m00"])
         except:
             fprint("Error finding Moment, turning right")
-            return shape[1]/2
+            return intersection, shape[1]/2
         cv2.circle(img, (cX, cY), 5, (0), -1)
         cv2.putText(img, ".", (cX, cY),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
-        cv2.imshow("Road Following", cv2.resize(img,(int(shape[1]/2), int(shape[0]/2)), interpolation = cv2.INTER_CUBIC))
-        s = np.sum(img)
+        cv2.imshow("Road Following", cv2.resize(img[:, :int(shape[1]/3)],(int(shape[1]/2), int(shape[0]/2)), interpolation = cv2.INTER_CUBIC))
+        s = np.sum(img[:, :int(shape[1]/3)])
+        fprint("s = ", s)
         if s > self.INTERSECTION_THRESHOLD:
             fprint("Upcoming intersection")
             intersection = True
@@ -142,7 +142,7 @@ class drivingController():
         # shape = img.shape
         # img = cv2.resize(img, (int(shape[1]/5), int(shape[0]/5)), interpolation = cv2.INTER_CUBIC)
         # img = cv2.GaussianBlur(img, (55,55), cv2.BORDER_DEFAULT)
-        n =  np.sum(cv2.inRange(img[550:], (0,0,200), (100,100,255)))
+        n =  np.sum(cv2.inRange(img[500:], (0,0,200), (100,100,255)))
         # fprint("Crosswalk handler: ", n)
         return n > self.STOP_LINE_THRESHOLD
 
@@ -171,6 +171,7 @@ class drivingController():
             s  = np.sum(diff_img)
             if s > self.MOVEMENT_THRESHOLD:
                 fprint("movement: ", s)
+        
             else:
                 fprint("No movement: ", s)
 
@@ -178,8 +179,9 @@ class drivingController():
             k = cv2.waitKey(1) & 0xFF
             if k == 27:
                 cv2.destroyAllWindows()
-            if np.sum(diff_img) > self.MOVEMENT_THRESHOLD * 5 and self.stop_time + 1 < rospy.get_rostime().secs:
+            if np.sum(diff_img) > self.MOVEMENT_THRESHOLD and self.stop_time + 1 < rospy.get_rostime().secs:
                 self.waited = True
+            fprint("Waited: ", self.waited)
             return np.sum(diff_img) > self.STILL_THRESHOLD
     
     def twist_(self, x, z):
@@ -196,6 +198,7 @@ class drivingController():
         """
         Checks an image to see if there is a crosswalk, and if so controls the robot throught
         without hitting a pedestrian 
+
         @return True if at cross walk 
         @author Lukas
         """
@@ -204,29 +207,29 @@ class drivingController():
             if not self.checkMovement(img):
                 fprint("All clear " + str(self.clear_count))
                 self.clear_count += 1
-                if self.waited and self.clear_count < 25:
+                if not self.waited or self.clear_count < 25:
                     fprint("Waiting")
                     self.clear_count += 1
+                    
                     return True
                 else:
                     fprint("Crossing")
                     self.cross_time = rospy.get_rostime().secs
-                    # self.twist_(0.5,0.3)
-                    # rospy.sleep(0.75) # gives enough time for car to cross
                     self.clear_count = 0
-                    self.waited = False
+                    
                     return False
             else:
                 fprint("Waiting at Crosswalk")
                 if self.stop_time + 5 < rospy.get_rostime().secs:
                     self.stop_time = rospy.get_rostime().secs
-                self.waited = True
                 self.twist_(0,0)
                 self.clear_count = 0
                 sleep(0.01)
                 return True
         else:
+            self.waited = False
             return False
+
 
     def followPath(self, img):
         """
@@ -236,12 +239,12 @@ class drivingController():
         """
         if self.start:
             return None
-
-
         
         if self.start_time + self.RUN_TIME  < rospy.get_rostime().secs:
             d.lp_pub.publish('TeamRed,multi21,-1,0000')
-            fprint("Timed Out; Ending Script")
+            print("========================\n")
+            fprint("Time's Up; Ending Script")
+            print("\n========================")
             self.twist_(0,0)
             self.img_sub.unregister() 
             raise KeyboardInterrupt     
@@ -272,8 +275,8 @@ class drivingController():
             az -= 0.5
             # else: 
                 # az += 0.5
-        if self.cross_time + 1 > rospy.get_rostime():
-            lx = max(lx, 0.1)
+        if self.cross_time + 1 > rospy.get_rostime().secs:
+            lx = max(lx, 0.3)
     
         self.twist_(lx , az)
 
