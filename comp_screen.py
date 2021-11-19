@@ -3,6 +3,7 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from python_qt_binding import loadUi
 
+import os
 import cv2
 import sys
 import rospy
@@ -22,8 +23,12 @@ class comp_App(QtWidgets.QMainWindow):
         super(comp_App, self).__init__()
         loadUi("./competition_screen.ui", self)
 
+        self.img_num = self.get_img_num()
+
         self.bridge = CvBridge()
         self.img_sub = rospy.Subscriber("/R1/pi_camera/image_raw", I, self.pub_image)
+
+        self.screenshot_button.clicked.connect(self.take_picture)
 
         # self._timer = QtCore.QTimer(self)
         # self._timer.timeout.connect(self.SLOT_query_camera)
@@ -32,9 +37,18 @@ class comp_App(QtWidgets.QMainWindow):
 
     def pub_image(self, img):
     	img = self.bridge.imgmsg_to_cv2(img, "bgr8")
+    	self.img=img
     	# img=Check_Homography(empty_license_img, img)
     	pixmap = self.convert_cv_to_pixmap(img)
         self.car_view_label.setPixmap(pixmap)
+
+    def take_picture(self):
+    	self.img_num+=1
+    	tmp = os.getcwd()
+    	os.chdir(tmp + "/imgs")
+    	cv2.imwrite(str(self.img_num) + ".png", self.img)
+    	os.chdir(tmp)
+    	print("Saved image ", self.img_num)
 
     def convert_cv_to_pixmap(self, cv_img):
         cv_img = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
@@ -43,6 +57,12 @@ class comp_App(QtWidgets.QMainWindow):
         q_img = QtGui.QImage(cv_img.data, width, height, 
                     bytesPerLine, QtGui.QImage.Format_RGB888)
         return QtGui.QPixmap.fromImage(q_img)
+
+    def get_img_num(self):
+        max_num = 0
+        for data in os.listdir(os.getcwd() + "/imgs"):
+            max_num = max(max_num, int(data[:-4]))
+        return max_num
 
 def Check_Homography(img, driving_feed):
 	img=cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
