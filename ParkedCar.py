@@ -17,7 +17,7 @@ def get_lp_letters(img):
     @return bool: if there are letters, list: list of letters from left to right (None if there are less than 4)
     @author Lukas
     """
-    lp = get_lp_letters(img)
+    lp = get_license_plates(img)
     filtered =[]
     for img in lp:
         img = cv2.cvtColor(img[:, 30:img.shape[1]-50], cv2.COLOR_BGR2HSV)
@@ -30,7 +30,7 @@ def get_lp_letters(img):
         filtered.append(i)
     letters = []
     for img in filtered:    
-        contours, _hierarchy = cv2.findContours(img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+        _, contours, _hierarchy = cv2.findContours(img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
         contours = list(filter(lambda x : cv2.arcLength(x, True) > 200, contours))
     
         contours_poly = [None]*len(contours)
@@ -44,7 +44,7 @@ def get_lp_letters(img):
         boundRect = sorted(boundRect, key = lambda x : x[0])
         
         if len(boundRect) < 4:
-            return False, None
+            return False, []
 
         drawing = np.zeros((img.shape[0], img.shape[1], 3), dtype=np.uint8)
         for i in range(len(boundRect)):
@@ -55,7 +55,7 @@ def get_lp_letters(img):
 
         for i in range(len(boundRect)):
             x,y,w,h = boundRect[i]
-            print(w*h)
+            # fprint(w*h)
             im = img[y:y+h , x:x+w]
             
             Lkernel = np.ones((5,5), np.uint8)
@@ -64,7 +64,7 @@ def get_lp_letters(img):
             im = cv2.erode(im,Skernel, iterations= 1)
             letters.append(im)
             cv2.imshow("Letter: " + str(i), im)
-        return True, letters
+    return True, letters
 
 def get_license_plates(img):
     """
@@ -93,27 +93,26 @@ def get_license_plates(img):
         img = cv2.dilate(img, Wkernel, iterations = 5)
         img = cv2.erode(img, Tkernel, iterations = 1)
 
-        contours, _hierarchy = cv2.findContours(img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+        _, contours, _hierarchy = cv2.findContours(img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
         squares = []
 
         for cnt in contours:
             cnt_len = cv2.arcLength(cnt, True)
             cnt = cv2.approxPolyDP(cnt, 0.02*cnt_len, True)
             if len(cnt) == 4 and cv2.isContourConvex(cnt) and cv2.contourArea(cnt) > 1500: 
-                print(cv2.contourArea(cnt))
+                # fprint(cv2.contourArea(cnt))
                 squares.append(cnt)
 
-        if len(squares) > 0:
-            for s in squares:
-                pts1 = corner_sorter(s)
-                pts2 = np.float32([[0,0],[200,0],[0,100],[200,100]])
-                M = cv2.getPerspectiveTransform(pts1,pts2)
-                dst = cv2.warpPerspective(i,M,(200,100))
-                kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
-                dst = cv2.filter2D(dst, -1, kernel)  
-                dst = cv2.resize(dst, (600, 300))
-                lp.append(dst)
-    cv2.imshow("License plate", lp[0])
+        for s in squares:
+            pts1 = corner_sorter(s)
+            pts2 = np.float32([[0,0],[200,0],[0,100],[200,100]])
+            M = cv2.getPerspectiveTransform(pts1,pts2)
+            dst = cv2.warpPerspective(i,M,(200,100))
+            kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
+            dst = cv2.filter2D(dst, -1, kernel)  
+            dst = cv2.resize(dst, (600, 300))
+            lp.append(dst)
+            cv2.imshow("License plate", dst)
     return lp
     
 def get_car_back(img):
@@ -143,13 +142,13 @@ def get_car_back(img):
     img = cv2.dilate(img, kernel, iterations = 2)
     img = cv2.erode(img, Tkernel, iterations = 3)
 
-    contours, _hierarchy = cv2.findContours(img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    _, contours, _hierarchy = cv2.findContours(img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
     squares = []
     for cnt in contours:
         cnt_len = cv2.arcLength(cnt, True)
         cnt = cv2.approxPolyDP(cnt, 0.02*cnt_len, True)
         if len(cnt) == 4 and cv2.isContourConvex(cnt) and cv2.contourArea(cnt) > 7500: # and cv2.contourArea(cnt) > 1000, 
-            print(cv2.contourArea(cnt))
+            # fprint(cv2.contourArea(cnt))
             squares.append(cnt)
     
     for s in squares:
@@ -160,7 +159,7 @@ def get_car_back(img):
         M = cv2.getPerspectiveTransform(pts1,pts2)
         dst = cv2.warpPerspective(i,M,(x,y))
         carBacks.append(dst)
-    cv2.imshow("Car Back", carBacks[0])
+        cv2.imshow("Car Back", dst)
     return carBacks
 
 def corner_sorter(lop):
