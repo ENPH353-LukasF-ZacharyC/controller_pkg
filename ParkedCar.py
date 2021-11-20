@@ -12,6 +12,11 @@ def fprint(*args):
     print(MODULE_NAME + ": " + " ".join(map(str,args)))
 
 def get_lp_letters(img):
+    """
+    Takes a image from the car and finds all the letters on parked cars in the image
+    @return bool: if there are letters, list: list of letters from left to right (None if there are less than 4)
+    @author Lukas
+    """
     lp = get_lp_letters(img)
     filtered =[]
     for img in lp:
@@ -59,9 +64,14 @@ def get_lp_letters(img):
             im = cv2.erode(im,Skernel, iterations= 1)
             letters.append(im)
             cv2.imshow("Letter: " + str(i), im)
-        return letters
+        return True, letters
 
 def get_license_plates(img):
+    """
+    gets all the license plates in a given image
+    @returns a list of all license plates
+    @author Lukas
+    """
     locb = get_car_back(img)
     lp = []
     for img in locb:
@@ -107,6 +117,11 @@ def get_license_plates(img):
     return lp
     
 def get_car_back(img):
+    """
+    Gets the image of a car back from an image
+    @returns an image of a car back 
+    @author Lukas
+    """
     carBacks = []
     i = img[300:]
     img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
@@ -149,8 +164,12 @@ def get_car_back(img):
     return carBacks
 
 def corner_sorter(lop):
+    """
+    Sorts a set of points in form [[[x1,y1]], [[x2,y2]], [[x3,y3]], [[x4,y4]]]]
+    @returns the list of points in order top left, top right, bottom left, bottom right
+    @author Lukas
+    """
     lop = list(lop)
-    # fprint(lop[0][0])
     s = sorted(lop, key = lambda x : x[0][0])
     left = sorted(s[:2], key = lambda x : x[0][1])
     right = sorted(s[2:], key = lambda x : x[0][1])
