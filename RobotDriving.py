@@ -43,7 +43,7 @@ class drivingHandler():
         self.clear_time = 0 # Counts how many frames without movement have been seen   
         self.waited = False # Stores whether the car is waiting at a cross walk or not
         self.stop_time = 0 
-        self.start = True
+        self.pause = True
         self.cross_time = 0 # Stores the time the car started to cross a crosswalk at
         # self.intersection_count = 0 # Stores how many intersections the car has gone through 
         self.intersection_time = 0 # Stores the time the car started going throught an intersection
@@ -60,11 +60,11 @@ class drivingHandler():
     def startHandler(self):
         start_time = rospy.get_rostime().secs
         self.twist_(0.4,1)
-        self.start = True
+        self.pause = True
         fprint("Starting")
         while start_time + 1 > rospy.get_rostime().secs:
             pass
-        self.start = False
+        self.pause = False
 
 
     def processImg(self, img):
@@ -186,9 +186,10 @@ class drivingHandler():
         @return None
         @author Lukas
         """
-        self.twist.linear.x = x
-        self.twist.angular.z = z
-        self.twist_pub.publish(self.twist)
+        if not self.pause:
+            self.twist.linear.x = x
+            self.twist.angular.z = z
+            self.twist_pub.publish(self.twist)
 
     def crosswalkHandler(self, img):
         """
@@ -205,19 +206,22 @@ class drivingHandler():
             if not self.checkMovement(img):
                 fprint("All clear " + str(self.clear_time))
                 
-                if not self.waited or self.clear_time + 0.5 < rospy.get_rostime().secs:
-                    fprint("Waiting")                
-                    return True
-
-                else:
+                if self.waited and self.clear_time + 0.5 < rospy.get_rostime().secs:
                     fprint("Crossing")
                     self.cross_time = rospy.get_rostime().secs
                     self.clear_time = rospy.get_rostime().secs
+                    self.pause = False
                     return False
+
+                else:
+                    self.pause = True
+                    fprint("Waiting")                
+                    return True
 
             else:
                 fprint("Waiting at Crosswalk")
                 self.twist_(0,0)
+                self.pause = True
                 self.clear_time = rospy.get_rostime().secs
                 sleep(0.01)
                 return True
@@ -232,13 +236,10 @@ class drivingHandler():
         @return None
         @author Lukas
         """
-        if self.start:
-            return None
-
         if self.cross_time + self.CROSSWALK_TIME < rospy.get_rostime().secs:
             if self.crosswalkHandler(img):
                 return None
-
+        
         intersection, offset = self.getOffset(img)
 
         fprint(offset)

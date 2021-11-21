@@ -25,13 +25,14 @@ def fprint(*args):
 class main():
     RUN_TIME = 1000 # How many seconds the robot should be running for
 
-    def __init__(self) -> None:
+    def __init__(self):
         self.bridge = CvBridge()
         self.drivingHandler = drivingHandler()
         self.licensePlateHandler = licensePlateHandler()
                 
         self.lp_pub = rospy.Publisher("/license_plate", String, queue_size=1)
         self.img_sub = rospy.Subscriber("/R1/pi_camera/image_raw", Image, self.protocol) # Handles car video feed
+        self.start_time = rospy.get_rostime().secs
         sleep(1)
         self.start_time = rospy.get_rostime().secs
         self.drivingHandler.startHandler()
