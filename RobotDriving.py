@@ -22,12 +22,12 @@ def fprint(*args):
     """
     print(MODULE_NAME + ": " + " ".join(map(str,args)))
 
-class drivingController():
+class drivingHandler():
     INTERSECTION_THRESHOLD = 2200000
     MOVEMENT_THRESHOLD = 50000
     STILL_THRESHOLD = 10000 # Summed number of pixel values where we can expect to see movement 
     STOP_LINE_THRESHOLD = 1500000 # Summed number of red pixel values where we can expect to see a red stop line
-    RUN_TIME = 1000 # How many seconds the car should be running for
+    
     CROSSWALK_TIME = 5
     INTERSECTION_TIME = 5
 
@@ -240,13 +240,8 @@ class drivingController():
         if self.start:
             return None
         
-        if self.start_time + self.RUN_TIME  < rospy.get_rostime().secs:
-            d.lp_pub.publish('TeamRed,multi21,-1,0000')
-            print("========================\n")
-            print("Time's Up; Ending Script")
-            print("\n========================")
-            self.twist_(0,0)
-            self.img_sub.unregister() 
+        
+             
             raise KeyboardInterrupt     
 
 
@@ -285,7 +280,7 @@ if __name__ == '__main__':
     fprint("starting Script")
     fprint("New Branch")
     rospy.init_node('driver', anonymous=True)
-    d = drivingController()
+    d = drivingHandler()
     d.lp_pub.publish('TeamRed,multi21,0,AA00')
     
     try:
