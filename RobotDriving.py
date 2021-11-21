@@ -5,6 +5,7 @@ from time import sleep
 import roslib
 import cv2
 from cv_bridge import CvBridge, CvBridgeError
+from rospy.rostime import get_rostime
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Twist
 import numpy as np
@@ -62,9 +63,12 @@ class drivingHandler():
         self.twist_(0.4,1)
         self.pause = True
         fprint("Starting")
+        
         while start_time + 1 > rospy.get_rostime().secs:
+            # fprint(start_time, rospy,get_rostime().secs)
             pass
         self.pause = False
+        fprint("Done Start Section")
 
 
     def processImg(self, img):
@@ -87,8 +91,10 @@ class drivingHandler():
         gray_img = cv2.cvtColor(color_img, cv2.COLOR_GRAY2BGR)
         # ret, img = cv2.threshold(gray_img,120,255,cv2.THRESH_BINARY_INV)
         img = cv2.inRange(gray_img, (80, 80, 80), (90, 90, 90))
-        kernel = np.ones((9,9),np.uint8)
+        kernel = np.ones((20,20),np.uint8)
+        Tkernel = np.ones((20,5),np.uint8)
         img = cv2.erode(img,kernel,iterations = 1)
+        img = cv2.dilate(img, Tkernel, iterations = 1)
         self.img = img
         return img
 
