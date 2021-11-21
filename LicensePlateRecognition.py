@@ -1,3 +1,7 @@
+import rospy
+from std_msgs.msg import String
+import roslib
+
 import cv2
 import numpy as np
 
@@ -173,3 +177,11 @@ def corner_sorter(lop):
     left = sorted(s[:2], key = lambda x : x[0][1])
     right = sorted(s[2:], key = lambda x : x[0][1])
     return np.array([left[0][0], right[0][0], left[1][0], right[1][0]], np.float32)
+
+class licensePlateHandler():
+    def __init__(self):
+        self.lp_pub = rospy.Publisher("/license_plate", String, queue_size=1)
+    
+    def reportLicensePlate(self, img):
+        letters = get_lp_letters(img)
+        # TODO ZACH LETTER RECOGNITION

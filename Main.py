@@ -1,5 +1,6 @@
 from RobotDriving import drivingHandler
-import cv2
+from LicensePlateRecognition import licensePlateHandler
+
 import os
 from time import sleep
 import roslib
@@ -33,6 +34,7 @@ class main():
         self.img_sub = rospy.Subscriber("/R1/pi_camera/image_raw", Image, self.protocol) # Handles car video feed
         sleep(1)
         self.start_time = rospy.get_rostime().secs
+        self.drivingHandler.startHandler()
 
     def protocol(self, img):
         if self.start_time + self.RUN_TIME  < rospy.get_rostime().secs:

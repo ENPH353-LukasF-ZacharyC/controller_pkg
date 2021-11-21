@@ -7,9 +7,6 @@ import cv2
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Twist
-from std_msgs.msg import String
-from ParkedCar import *
-
 import numpy as np
 
 MODULE_NAME = "Driving Module"
@@ -34,15 +31,13 @@ class drivingHandler():
 
     def __init__(self):
         """
-        Initializes a new drivingController that subscribes to the robots camera feed and publishes movement controls 
+        Initializes a new drivingHandler that subscribes to the robots camera feed and publishes movement controls 
         @return None
         @author Lukas
         """
-        self.lp_pub = rospy.Publisher("/license_plate", String, queue_size=1)
+        
         self.twist_pub = rospy.Publisher("R1/cmd_vel", Twist, queue_size=1) # Handles car communication
-        self.img_sub = rospy.Subscriber("/R1/pi_camera/image_raw", Image, self.followPath) # Handles car video feed
         self.img_num = 0 # Stores how many images have been seen
-        self.bridge = CvBridge()
         self.twist = Twist() # Car's velocity
         self.previous_img = None # Previously seen image (used for motion detection not always up to date)
         self.clear_time = 0 # Counts how many frames without movement have been seen   
@@ -50,14 +45,14 @@ class drivingHandler():
         self.stop_time = 0 
         self.start = True
         self.cross_time = 0 # Stores the time the car started to cross a crosswalk at
-        self.intersection_count = 0 # Stores how many intersections the car has gone through 
+        # self.intersection_count = 0 # Stores how many intersections the car has gone through 
         self.intersection_time = 0 # Stores the time the car started going throught an intersection
         self.start_time = rospy.get_rostime().secs
         sleep(1) # imporant for initializing publishers
 
         self.start_time = rospy.get_rostime().secs # Stores how long the car has been going for
 
-        self.startHandler() # Handles the starting intersection of the car
+        # self.startHandler() # Handles the starting intersection of the car
         # self.twist_(0.05, 0.25)
         # rospy.sleep(0.1)
         
@@ -231,7 +226,7 @@ class drivingHandler():
             return False
 
 
-    def followPath(self, img):
+    def drive(self, img):
         """
         Takes the robots camera image and controls the robot to follow the road
         @return None
@@ -239,19 +234,7 @@ class drivingHandler():
         """
         if self.start:
             return None
-        
-        
-             
-            raise KeyboardInterrupt     
 
-
-        try:
-            img = self.bridge.imgmsg_to_cv2(img, "bgr8")
-        except:
-            fprint("No image found")
-            return None
-        ret, lp = get_lp_letters(img)
-        # fprint("LP: ", lp)
         if self.cross_time + self.CROSSWALK_TIME < rospy.get_rostime().secs:
             if self.crosswalkHandler(img):
                 return None
@@ -263,11 +246,10 @@ class drivingHandler():
 
         az = -2*P*offset
         lx = max(0.5 - P*np.abs(offset),0)
+
         if intersection:
-            # if self.intersection_count < 4:
             az -= 0.5
-            # else: 
-                # az += 0.5
+        
         if self.cross_time + 2 > rospy.get_rostime().secs:
             fprint("BIASED")
             lx = max(lx, 0.5)
