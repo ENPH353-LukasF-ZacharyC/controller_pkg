@@ -46,16 +46,13 @@ class drivingHandler():
         self.stop_time = 0 
         self.pause = True
         self.cross_time = 0 # Stores the time the car started to cross a crosswalk at
-        # self.intersection_count = 0 # Stores how many intersections the car has gone through 
+        
         self.intersection_time = 0 # Stores the time the car started going throught an intersection
         self.start_time = rospy.get_rostime().secs
+
         sleep(1) # imporant for initializing publishers
 
         self.start_time = rospy.get_rostime().secs # Stores how long the car has been going for
-
-        # self.startHandler() # Handles the starting intersection of the car
-        # self.twist_(0.05, 0.25)
-        # rospy.sleep(0.1)
         
         
     def startHandler(self):
@@ -65,7 +62,7 @@ class drivingHandler():
         fprint("Starting")
         
         while start_time + 1 > rospy.get_rostime().secs:
-            # fprint(start_time, rospy,get_rostime().secs)
+            
             pass
         self.pause = False
         fprint("Done Start Section")
@@ -78,9 +75,7 @@ class drivingHandler():
         @return processed image
         @author Lukas
         """
-        # os.chdir("/home/fizzer/ros_ws/src/controller_pkg/imgs/")
-        # # cv2.imwrite("img_" + str(self.img_num) + ".png", img)
-        # self.img_num += 1
+        
         img[:, :, 0] = img[:, :, 1] # removes the Red 
         img[:, :, 2] = img[:, :, 1] # and Blue Channels
         img = img[400:, 200:1200]
