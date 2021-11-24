@@ -18,7 +18,7 @@ def fprint(*args):
     @return None
     @author Lukas
     """
-    print(MODULE_NAME + ": " + " ".join(map(str,args)))
+    # print(MODULE_NAME + ": " + " ".join(map(str,args)))
 
 class drivingHandler():
     INTERSECTION_THRESHOLD = 2200000

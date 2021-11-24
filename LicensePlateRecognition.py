@@ -69,7 +69,11 @@ def get_lp_letters(img):
             im = cv2.erode(im,Skernel, iterations= 1)
             letters.append(im)
             cv2.imshow("Letter: " + str(i), im)
-    return True, letters
+
+    if len(letters) < 4:
+        return False, []
+    else:
+        return True, letters
 
 def get_license_plates(img):
     """
