@@ -1,9 +1,19 @@
 import rospy
 from std_msgs.msg import String
 import roslib
+import tensorflow as tf
 
 import cv2
 import numpy as np
+
+from tensorflow import keras
+from tensorflow.keras import *
+from tensorflow.python.keras.backend import set_session
+from tensorflow.python.keras.models import load_model
+
+sess1 = tf.compat.v1.Session()    
+graph1 = tf.get_default_graph()
+set_session(sess1)
 
 MODULE_NAME = "Car Finding"
 
