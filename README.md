@@ -9,4 +9,5 @@
 Follows the Center of mass of the road using PID. 
 
 Dectects the red of the crosswalk stop line
+
   Stops and waits for the pedestrian to walk. Once pedestrian has stopped crossing car crosses the crosswalk with an forward Bias (will always move forward) for 2 sim seconds
