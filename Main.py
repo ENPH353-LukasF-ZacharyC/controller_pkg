@@ -45,7 +45,7 @@ class main():
             img = self.bridge.imgmsg_to_cv2(img, "bgr8")
             img2 = img.copy()
             self.drivingHandler.drive(img)
-            # self.licensePlateHandler.reportLicensePlate(img2)
+            self.licensePlateHandler.reportLicensePlate(img2)
 
 
 

@@ -57,11 +57,11 @@ class drivingHandler():
         
     def startHandler(self):
         start_time = rospy.get_rostime().secs
-        self.twist_(0.4,1, override=True)
+        self.twist_(0.4,3, override=True)
         
         fprint("Starting")
         
-        while start_time + 1 > rospy.get_rostime().secs:
+        while start_time + 2 > rospy.get_rostime().secs:
             self.twist_(0.4,1, override=True)
             self.pause = True
             fprint(self.twist)
@@ -190,8 +190,8 @@ class drivingHandler():
         @author Lukas
         """
         if not self.pause or override:
-            self.twist.linear.x = x
-            self.twist.angular.z = z
+            self.twist.linear.x = x/4.0
+            self.twist.angular.z = z/4.0
             self.twist_pub.publish(self.twist)
 
     def crosswalkHandler(self, img):

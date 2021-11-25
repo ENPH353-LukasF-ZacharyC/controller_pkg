@@ -6,6 +6,8 @@ import tensorflow as tf
 import cv2
 import numpy as np
 
+from collections import Counter
+
 from tensorflow import keras
 
 from tensorflow.python.keras.backend import set_session
@@ -199,6 +201,10 @@ class licensePlateHandler():
         self.letter_num = 0
         self.lp_pub = rospy.Publisher("/license_plate", String, queue_size=1)
         self.model = self.load_model()
+        self.ps_plates = {"1": [], "2": [], "3": [], "4": [], "5": [], "6": [], "7": [], "8": []}
+        self.ps_order = ["2","3","4","5","6","1","7","8"]
+        self.current_ps_index = 0
+        self.time_looking_for_lp = 0
 
     def load_model(self):
         return keras.models.load_model("Letter_Identification_NN.h5")
@@ -212,6 +218,7 @@ class licensePlateHandler():
     
     def reportLicensePlate(self, img):
         status, letters = get_lp_letters(img)
+        spot = self.ps_order[self.current_ps_index]
         # status = False
         # for letter in letters:
         #     cv2.imwrite("letter_" + str(self.letter_num) + ".png", letter)
@@ -225,13 +232,42 @@ class licensePlateHandler():
                 r = np.expand_dims(r, axis = 0)
                 resized.append(r)
 
+            prediction=""
             global sess1
             global graph1
-            prediction = None
             with graph1.as_default():
                 set_session(sess1)
                 for letter_img in resized:
-                    prediction=self.vector_to_str(self.model.predict(letter_img)[0])
-                    print(prediction)
+                    p=self.vector_to_str(self.model.predict(letter_img)[0])
+                    prediction += p
+
+                # print(prediction)
+                self.ps_plates[spot].append(prediction)
+
+        if len(self.ps_plates[spot]) != 0 and self.time_looking_for_lp == 0:
+            self.time_looking_for_lp = rospy.get_rostime().secs
+
+        if rospy.get_rostime().secs - self.time_looking_for_lp > 7 and self.time_looking_for_lp != 0:
+            potential_winners = self.ps_plates[spot]
+            plate_count = Counter(potential_winners)
+            top = plate_count.most_common(1)
+            print("//////////////////////////////////////////////////")
+            fprint("The most frequent license plate is: "+ top[0][0])
+            fprint("At spot: "+ str(spot))
+            print("//////////////////////////////////////////////////")
+            self.current_ps_index += 1
+            self.time_looking_for_lp = 0
+
+
+        # else:
+        #     if len(self.potential_winner) != 0:
+        #         possible_plates = Counter(self.potential_winner)
+        #         top = possible_plates.most_common(1)
+        #         print("The most frequent license plate is: ")
+        #         print(top[0][0])
+        #         self.potential_winner=[]
+
+
+
 
         # TODO ZACH LETTER RECOGNITION
