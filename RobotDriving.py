@@ -18,7 +18,7 @@ def fprint(*args):
     @return None
     @author Lukas
     """
-    # print(MODULE_NAME + ": " + " ".join(map(str,args)))
+    print(MODULE_NAME + ": " + " ".join(map(str,args)))
 
 class drivingHandler():
     INTERSECTION_THRESHOLD = 2200000
@@ -58,11 +58,11 @@ class drivingHandler():
     def startHandler(self):
         start_time = rospy.get_rostime().secs
         self.twist_(0.4,1)
-        self.pause = True
+        
         fprint("Starting")
         
         while start_time + 1 > rospy.get_rostime().secs:
-            
+            self.pause = True
             pass
         self.pause = False
         fprint("Done Start Section")
