@@ -1,5 +1,19 @@
+import rospy
+from std_msgs.msg import String
+import roslib
+import tensorflow as tf
+
 import cv2
 import numpy as np
+
+from tensorflow import keras
+
+from tensorflow.python.keras.backend import set_session
+from tensorflow.python.keras.models import load_model
+
+sess1 = tf.compat.v1.Session()    
+graph1 = tf.get_default_graph()
+set_session(sess1)
 
 MODULE_NAME = "Car Finding"
 
@@ -17,6 +31,7 @@ def get_lp_letters(img):
     @return bool: if there are letters, list: list of letters from left to right (None if there are less than 4)
     @author Lukas
     """
+    fprint("Getting plates")
     lp = get_license_plates(img)
     filtered =[]
     for img in lp:
@@ -64,7 +79,11 @@ def get_lp_letters(img):
             im = cv2.erode(im,Skernel, iterations= 1)
             letters.append(im)
             cv2.imshow("Letter: " + str(i), im)
-    return True, letters
+
+    if len(letters) < 4:
+        return False, []
+    else:
+        return True, letters
 
 def get_license_plates(img):
     """
@@ -173,3 +192,46 @@ def corner_sorter(lop):
     left = sorted(s[:2], key = lambda x : x[0][1])
     right = sorted(s[2:], key = lambda x : x[0][1])
     return np.array([left[0][0], right[0][0], left[1][0], right[1][0]], np.float32)
+
+class licensePlateHandler():
+
+    def __init__(self):
+        self.letter_num = 0
+        self.lp_pub = rospy.Publisher("/license_plate", String, queue_size=1)
+        self.model = self.load_model()
+
+    def load_model(self):
+        return keras.models.load_model("Letter_Identification_NN.h5")
+
+    def vector_to_str(self, vector):
+        m = np.argmax(vector)
+        if m >= 10:
+            return chr(m+55)
+        else:
+            return chr(m+48)
+    
+    def reportLicensePlate(self, img):
+        status, letters = get_lp_letters(img)
+        # status = False
+        # for letter in letters:
+        #     cv2.imwrite("letter_" + str(self.letter_num) + ".png", letter)
+        #     self.letter_num += 1
+        if status is True and len(letters) == 4:
+            resized=[]
+            for i in letters:
+                dim = (95, 125)
+                r = cv2.resize(i, dim, interpolation = cv2.INTER_AREA)
+                r = np.expand_dims(r, axis = 2)
+                r = np.expand_dims(r, axis = 0)
+                resized.append(r)
+
+            global sess1
+            global graph1
+            prediction = None
+            with graph1.as_default():
+                set_session(sess1)
+                for letter_img in resized:
+                    prediction=self.vector_to_str(self.model.predict(letter_img)[0])
+                    print(prediction)
+
+        # TODO ZACH LETTER RECOGNITION

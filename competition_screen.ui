@@ -6,15 +6,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1338</width>
-    <height>1198</height>
+    <width>1758</width>
+    <height>1471</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Competition Window</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QPushButton" name="car_view_button">
+   <widget class="QPushButton" name="screenshot_button">
     <property name="geometry">
      <rect>
       <x>410</x>
@@ -24,7 +24,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>&amp;Car View</string>
+     <string>&amp;Screenshot</string>
     </property>
    </widget>
    <widget class="QLabel" name="car_view_label">
@@ -46,7 +46,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1338</width>
+     <width>1758</width>
      <height>57</height>
     </rect>
    </property>
