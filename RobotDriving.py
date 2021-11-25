@@ -57,12 +57,14 @@ class drivingHandler():
         
     def startHandler(self):
         start_time = rospy.get_rostime().secs
-        self.twist_(0.4,1)
+        self.twist_(0.4,1, override=True)
         
         fprint("Starting")
         
         while start_time + 1 > rospy.get_rostime().secs:
+            self.twist_(0.4,1, override=True)
             self.pause = True
+            fprint(self.twist)
             pass
         self.pause = False
         fprint("Done Start Section")
@@ -181,13 +183,13 @@ class drivingHandler():
             fprint("Waited: ", self.waited)
             return np.sum(diff_img) > self.STILL_THRESHOLD
     
-    def twist_(self, x, z):
+    def twist_(self, x, z, override = False):
         """
         Publishes the cars twist
         @return None
         @author Lukas
         """
-        if not self.pause:
+        if not self.pause or override:
             self.twist.linear.x = x
             self.twist.angular.z = z
             self.twist_pub.publish(self.twist)
