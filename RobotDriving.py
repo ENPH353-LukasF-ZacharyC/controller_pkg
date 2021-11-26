@@ -49,8 +49,9 @@ class drivingHandler():
         self.cross_time = 0 # Stores the time the car started to cross a crosswalk at
         self.BlueCar = False
         self.outter_circle = True
-        self.inner_cirlce = False
+        self.inner_circle = False
         
+        self.start = True
         self.intersection_time = 0 # Stores the time the car started going throught an intersection
         self.start_time = rospy.get_rostime().secs
 
@@ -62,15 +63,17 @@ class drivingHandler():
     def startHandler(self):
         start_time = rospy.get_rostime().secs
         self.twist_(0.4,3, override=True)
-        
+        self.pause = False
         fprint("Starting")
         
-        while start_time + 1 > rospy.get_rostime().secs:
-            self.twist_(0.5,1.25, override=True)
-            self.pause = True
+        while start_time + 3 > rospy.get_rostime().secs:
+            # self.twist_(0.5,1.25, override=True)
+            
+            self.start = True
             # fprint(self.twist)
             pass
-        self.pause = False
+        # self.pause = False
+        self.start = False
         fprint("Done Start Section")
 
 
@@ -156,7 +159,7 @@ class drivingHandler():
         # shape = img.shape
         # img = cv2.resize(img, (int(shape[1]/5), int(shape[0]/5)), interpolation = cv2.INTER_CUBIC)
         # img = cv2.GaussianBlur(img, (55,55), cv2.BORDER_DEFAULT)
-        n =  np.sum(cv2.inRange(img[500:], (0,0,200), (100,100,255)))
+        n =  np.sum(cv2.inRange(img[550:], (0,0,200), (100,100,255)))
         # fprint("Crosswalk handler: ", n)
         return n > self.STOP_LINE_THRESHOLD
 
@@ -219,7 +222,7 @@ class drivingHandler():
         """
         if self.checkCrosswalk(img):
             self.twist_(0,0)
-            if self.stop_time + 5 < rospy.get_rostime().secs:
+            if self.stop_time + 3 < rospy.get_rostime().secs:
                     self.stop_time = rospy.get_rostime().secs
             if not self.checkMovement(img):
                 fprint("All clear " + str(self.clear_time))
@@ -246,6 +249,7 @@ class drivingHandler():
         else:
             self.waited = False
             return False
+            
 
 
     def drive(self, img):
@@ -254,10 +258,12 @@ class drivingHandler():
         @return None
         @author Lukas
         """
+
         if self.cross_time + self.CROSSWALK_TIME < rospy.get_rostime().secs:
             if self.crosswalkHandler(img):
                 return None
         
+
         intersection, offset = self.getOffset(img)
 
         fprint(offset)
@@ -266,21 +272,31 @@ class drivingHandler():
         az = -2*P*offset
         lx = max(0.5 - P*np.abs(offset),0)
 
+        fprint("CIRCLE ", self.outter_circle, self.inner_circle)
         if intersection:
-            if self.outter_circle or self.inner_cirlce:
+            if self.outter_circle or self.inner_circle:
                 az -= 0.8
             else:
-                self.pause = True
                 fprint("TURNING IN")
-                az += 1
+                if self.intersection_time == 0: 
+                    self.intersection_time = rospy.get_rostime().secs
+                if rospy.get_rostime().secs - self.intersection_time < 2:
+                    az += 0.8
+                else: 
+                    self.twist_(0,0)
+                    return None
+                
 
         if self.BlueCar:
             az -= 0.5
         
+        if self.start:
+            az = abs(az)
+        
         # lx /= 4.0
         # az /= 4.0
 
-        if self.cross_time + 2 > rospy.get_rostime().secs:
+        if self.cross_time + 1 > rospy.get_rostime().secs:
             fprint("BIASED")
             lx = max(lx, 0.5)
             az = max(az, 0)
