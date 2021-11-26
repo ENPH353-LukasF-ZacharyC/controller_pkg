@@ -247,7 +247,7 @@ class licensePlateHandler():
         if len(self.ps_plates[spot]) != 0 and self.time_looking_for_lp == 0:
             self.time_looking_for_lp = rospy.get_rostime().secs
 
-        if rospy.get_rostime().secs - self.time_looking_for_lp > 1.75 and self.time_looking_for_lp != 0:
+        if rospy.get_rostime().secs - self.time_looking_for_lp > 2.5 and self.time_looking_for_lp != 0:
             potential_winners = self.ps_plates[spot]
             plate_count = Counter(potential_winners)
             top = plate_count.most_common(1)
@@ -272,4 +272,4 @@ class licensePlateHandler():
 
 
 
-        # TODO ZACH LETTER RECOGNITION
+        # TODO B/3 Mix up

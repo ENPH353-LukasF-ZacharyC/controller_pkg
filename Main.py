@@ -46,6 +46,8 @@ class main():
             img2 = img.copy()
             self.drivingHandler.drive(img)
             self.licensePlateHandler.reportLicensePlate(img2)
+        if self.licensePlateHandler.current_ps_index == 6 and self.licensePlateHandler.time_looking_for_lp > 0:
+            self.drivingHandler.outter_circle = True
 
 
 

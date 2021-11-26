@@ -18,7 +18,7 @@ def fprint(*args):
     @return None
     @author Lukas
     """
-    # print(MODULE_NAME + ": " + " ".join(map(str,args)))
+    print(MODULE_NAME + ": " + " ".join(map(str,args)))
 
 class drivingHandler():
     BLUE_CAR_THRESHOLD = 100000
@@ -48,6 +48,8 @@ class drivingHandler():
         self.pause = True
         self.cross_time = 0 # Stores the time the car started to cross a crosswalk at
         self.BlueCar = False
+        self.outter_circle = True
+        self.inner_cirlce = False
         
         self.intersection_time = 0 # Stores the time the car started going throught an intersection
         self.start_time = rospy.get_rostime().secs
@@ -265,11 +267,19 @@ class drivingHandler():
         lx = max(0.5 - P*np.abs(offset),0)
 
         if intersection:
-            az -= 0.8
+            if self.outter_circle or self.inner_cirlce:
+                az -= 0.8
+            else:
+                self.pause = True
+                fprint("TURNING IN")
+                az += 1
 
         if self.BlueCar:
             az -= 0.5
         
+        # lx /= 4.0
+        # az /= 4.0
+
         if self.cross_time + 2 > rospy.get_rostime().secs:
             fprint("BIASED")
             lx = max(lx, 0.5)
