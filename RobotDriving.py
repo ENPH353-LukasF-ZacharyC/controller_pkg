@@ -18,7 +18,7 @@ def fprint(*args):
     @return None
     @author Lukas
     """
-    print(MODULE_NAME + ": " + " ".join(map(str,args)))
+    # print(MODULE_NAME + ": " + " ".join(map(str,args)))
 
 class drivingHandler():
     BLUE_CAR_THRESHOLD = 100000
@@ -47,6 +47,7 @@ class drivingHandler():
         self.stop_time = 0 
         self.pause = True
         self.cross_time = 0 # Stores the time the car started to cross a crosswalk at
+        self.BlueCar = False
         
         self.intersection_time = 0 # Stores the time the car started going throught an intersection
         self.start_time = rospy.get_rostime().secs
@@ -63,9 +64,9 @@ class drivingHandler():
         fprint("Starting")
         
         while start_time + 1 > rospy.get_rostime().secs:
-            self.twist_(0.4,1, override=True)
+            self.twist_(0.5,1.25, override=True)
             self.pause = True
-            fprint(self.twist)
+            # fprint(self.twist)
             pass
         self.pause = False
         fprint("Done Start Section")
