@@ -33,7 +33,7 @@ def get_lp_letters(img):
     @return bool: if there are letters, list: list of letters from left to right (None if there are less than 4)
     @author Lukas
     """
-    fprint("Getting plates")
+    # fprint("Getting plates")
     lp = get_license_plates(img)
     filtered =[]
     for img in lp:

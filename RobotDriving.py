@@ -21,6 +21,7 @@ def fprint(*args):
     print(MODULE_NAME + ": " + " ".join(map(str,args)))
 
 class drivingHandler():
+    BLUE_CAR_THRESHOLD = 100000
     INTERSECTION_THRESHOLD = 2200000
     MOVEMENT_THRESHOLD = 50000
     STILL_THRESHOLD = 10000 # Summed number of pixel values where we can expect to see movement 
@@ -61,7 +62,7 @@ class drivingHandler():
         
         fprint("Starting")
         
-        while start_time + 2 > rospy.get_rostime().secs:
+        while start_time + 1 > rospy.get_rostime().secs:
             self.twist_(0.4,1, override=True)
             self.pause = True
             fprint(self.twist)
@@ -105,6 +106,11 @@ class drivingHandler():
         @author Lukas
         """
         intersection = False
+        hsv = cv2.cvtColor(img[400:, 200:1200], cv2.COLOR_BGR2HSV)
+        shape = hsv.shape
+        hsv = cv2.resize(hsv, (int(shape[1]/5), int(shape[0]/5)), interpolation = cv2.INTER_CUBIC)
+        hsv = cv2.inRange(hsv, (100, 0,0), (255,255,255))
+
         img = self.processImg(img)
         M = cv2.moments(img)
         shape = img.shape
@@ -117,13 +123,19 @@ class drivingHandler():
         cv2.circle(img, (cX, cY), 5, (0), -1)
         cv2.putText(img, ".", (cX, cY),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
         cv2.imshow("Road Following", img)
+        if np.sum(hsv) > self.BLUE_CAR_THRESHOLD:
+            fprint("Blue Car: ", np.sum(hsv))
+            self.BlueCar = True
+        else: 
+            self.BlueCar = False
+
         s = np.sum(img)
-        fprint("s = ", s)
+        # fprint("s = ", s)
         if s > self.INTERSECTION_THRESHOLD:
             fprint("Upcoming intersection")
             intersection = True
         else: 
-            fprint("On the road")
+            # fprint("On the road")
             intersection = False
         k = cv2.waitKey(1) & 0xFF
         if k == 27:
@@ -190,8 +202,8 @@ class drivingHandler():
         @author Lukas
         """
         if not self.pause or override:
-            self.twist.linear.x = x/4.0
-            self.twist.angular.z = z/4.0
+            self.twist.linear.x = x
+            self.twist.angular.z = z
             self.twist_pub.publish(self.twist)
 
     def crosswalkHandler(self, img):
@@ -252,11 +264,15 @@ class drivingHandler():
         lx = max(0.5 - P*np.abs(offset),0)
 
         if intersection:
+            az -= 0.8
+
+        if self.BlueCar:
             az -= 0.5
         
         if self.cross_time + 2 > rospy.get_rostime().secs:
             fprint("BIASED")
             lx = max(lx, 0.5)
+            az = max(az, 0)
     
         self.twist_(lx , az)
 
