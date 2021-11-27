@@ -23,8 +23,8 @@ def fprint(*args):
 class drivingHandler():
     BLUE_CAR_THRESHOLD = 100000
     INTERSECTION_THRESHOLD = 2200000
-    MOVEMENT_THRESHOLD = 50000
-    STILL_THRESHOLD = 10000 # Summed number of pixel values where we can expect to see movement 
+    MOVEMENT_THRESHOLD = 100000
+    STILL_THRESHOLD = 40000 # Summed number of pixel values where we can expect to see movement 
     STOP_LINE_THRESHOLD = 1500000 # Summed number of red pixel values where we can expect to see a red stop line
     
     CROSSWALK_TIME = 5
@@ -51,6 +51,7 @@ class drivingHandler():
         self.outter_circle = True
         self.inner_circle = False
         
+        self.turn_in_time = 0
         self.start = True
         self.intersection_time = 0 # Stores the time the car started going throught an intersection
         self.start_time = rospy.get_rostime().secs
@@ -66,7 +67,7 @@ class drivingHandler():
         self.pause = False
         fprint("Starting")
         
-        while start_time + 3 > rospy.get_rostime().secs:
+        while start_time + 2 > rospy.get_rostime().secs:
             # self.twist_(0.5,1.25, override=True)
             
             self.start = True
@@ -169,18 +170,19 @@ class drivingHandler():
         
         @return True if there is movement, False otherwise
         @author Lukas
+        
         """
+        shape = img.shape
+        img = cv2.resize(img, (int(shape[1]/5), int(shape[0]/5)), interpolation = cv2.INTER_CUBIC)
+        img = cv2.GaussianBlur(img, (55,55), cv2.BORDER_DEFAULT)
+        color_img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+        img = cv2.cvtColor(color_img, cv2.COLOR_GRAY2BGR)
         if self.previous_img is None:
-            shape = img.shape
-            img = cv2.resize(img, (int(shape[1]/5), int(shape[0]/5)), interpolation = cv2.INTER_CUBIC)
-            self.previous_img = cv2.GaussianBlur(img, (55,55), cv2.BORDER_DEFAULT)
+            self.previous_img = img
             return True
         else:
-            shape = img.shape
-            img = cv2.resize(img, (int(shape[1]/5), int(shape[0]/5)), interpolation = cv2.INTER_CUBIC)
-            img = cv2.GaussianBlur(img, (55,55), cv2.BORDER_DEFAULT)
             diff_img = img - self.previous_img
-            kernel = np.ones((7,7),np.uint8)
+            kernel = np.ones((5,5),np.uint8)
             diff_img = cv2.erode(diff_img, kernel,iterations = 1)
             fprint("movement: " + str(np.sum(diff_img)))
             self.previous_img = img
@@ -222,7 +224,7 @@ class drivingHandler():
         """
         if self.checkCrosswalk(img):
             self.twist_(0,0)
-            if self.stop_time + 3 < rospy.get_rostime().secs:
+            if self.stop_time == 0:
                     self.stop_time = rospy.get_rostime().secs
             if not self.checkMovement(img):
                 fprint("All clear " + str(self.clear_time))
@@ -232,6 +234,8 @@ class drivingHandler():
                     self.cross_time = rospy.get_rostime().secs
                     self.clear_time = rospy.get_rostime().secs
                     self.pause = False
+                    self.waited = False
+                    self.stop_time = 0
                     return False
 
                 else:
@@ -247,10 +251,38 @@ class drivingHandler():
                 sleep(0.01)
                 return True
         else:
-            self.waited = False
             return False
             
+    def turnInHandler(self, img):
+        if not self.outter_circle and not self.outter_circle:
+            self.twist_(0,0)
+            if self.stop_time + 3 < rospy.get_rostime().secs:
+                    self.stop_time = rospy.get_rostime().secs
+            if not self.checkMovement(img):
+                fprint("All clear " + str(self.clear_time))
+                
+                if self.waited and self.clear_time + 0.5 < rospy.get_rostime().secs:
+                    fprint("Crossing")
+                    self.intersection_time = rospy.get_rostime().secs
+                    self.clear_time = rospy.get_rostime().secs
+                    self.pause = False
+                    self.waited = False 
+                    return False
 
+                else:
+                    self.pause = True
+                    fprint("Waiting")       
+                    return True
+
+            else:
+                fprint("Waiting at intersection")
+                self.twist_(0,0)
+                self.pause = True
+                self.clear_time = rospy.get_rostime().secs
+                sleep(0.01)
+                return True
+        else:
+            return False
 
     def drive(self, img):
         """
@@ -260,11 +292,11 @@ class drivingHandler():
         """
 
         if self.cross_time + self.CROSSWALK_TIME < rospy.get_rostime().secs:
-            if self.crosswalkHandler(img):
+            if self.crosswalkHandler(img.copy()):
                 return None
         
 
-        intersection, offset = self.getOffset(img)
+        intersection, offset = self.getOffset(img.copy())
 
         fprint(offset)
         P = 0.01
@@ -273,28 +305,40 @@ class drivingHandler():
         lx = max(0.5 - P*np.abs(offset),0)
 
         fprint("CIRCLE ", self.outter_circle, self.inner_circle)
+
         if intersection:
             if self.outter_circle or self.inner_circle:
                 az -= 0.8
             else:
-                fprint("TURNING IN")
+                fprint("TRANSITIONING")
                 if self.intersection_time == 0: 
                     self.intersection_time = rospy.get_rostime().secs
                 if rospy.get_rostime().secs - self.intersection_time < 2:
+                    fprint("TURNING IN")
+                    lx -= 0.1
                     az += 0.8
                 else: 
-                    self.twist_(0,0)
-                    return None
-                
+                    if self.turnInHandler(img.copy()):
+                        fprint("WAITING TO ENTER INNER CIRCLE")
+                        return None
+                    else:
+                        fprint("ENTERING INNER CIRCLE")
+                        self.inner_circle = True
+                        self.turn_in_time = rospy.get_rostime().secs
 
         if self.BlueCar:
-            az -= 0.5
+            if not self.inner_circle:
+                lx -= 0.1
+                az -= 0.5
+            elif self.inner_circle:
+                az += 0.1
         
         if self.start:
             az = abs(az)
         
-        # lx /= 4.0
-        # az /= 4.0
+        if self.turn_in_time + 1 > rospy.get_rostime().secs:
+            print("Turning In")
+            az += 1.6
 
         if self.cross_time + 1 > rospy.get_rostime().secs:
             fprint("BIASED")

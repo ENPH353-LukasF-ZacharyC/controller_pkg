@@ -2,7 +2,8 @@ import rospy
 from std_msgs.msg import String
 import roslib
 import tensorflow as tf
-
+from time import sleep
+import time
 import cv2
 import numpy as np
 
@@ -201,13 +202,13 @@ class licensePlateHandler():
         self.letter_num = 0
         self.lp_pub = rospy.Publisher("/license_plate", String, queue_size=1)
         self.model = self.load_model()
-        self.ps_plates = {"1": [], "2": [], "3": [], "4": [], "5": [], "6": [], "7": [], "8": []}
-        self.ps_order = ["2","3","4","5","6","1","7","8"]
+        self.ps_plates = {"1": [], "2": [], "3": [], "4": [], "5": [], "6": [], "7": [], "8": [], "9": []}
+        self.ps_order = ["2","3","4","5","6","1","7","8", "9"]
         self.current_ps_index = 0
         self.time_looking_for_lp = 0
 
     def load_model(self):
-        return keras.models.load_model("Letter_Identification_NN.h5")
+        return keras.models.load_model("Nov26_New_Font_Model1_Letter_Identification_NN.h5")
 
     def vector_to_str(self, vector):
         m = np.argmax(vector)
@@ -241,7 +242,7 @@ class licensePlateHandler():
                     p=self.vector_to_str(self.model.predict(letter_img)[0])
                     prediction += p
 
-                # print(prediction)
+                print(prediction)
                 self.ps_plates[spot].append(prediction)
 
         if len(self.ps_plates[spot]) != 0 and self.time_looking_for_lp == 0:
@@ -259,6 +260,11 @@ class licensePlateHandler():
             self.lp_pub.publish('TeamRed,multi21,{},{}'.format(str(spot), top[0][0]))
             self.current_ps_index += 1
             self.time_looking_for_lp = 0
+            
+        if self.current_ps_index > 7:
+            sleep(0.5)
+            self.lp_pub.publish('TeamRed,multi21,-1,AA00')
+            return True
 
 
         # else:
