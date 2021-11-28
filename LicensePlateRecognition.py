@@ -26,7 +26,7 @@ def fprint(*args):
     @return None
     @author Lukas
     """
-    print(MODULE_NAME + ": " + " ".join(map(str,args)))
+    print(str(rospy.get_rostime().secs) + ": " + MODULE_NAME + ": " + " ".join(map(str,args)))
 
 def get_lp_letters(img):
     """
@@ -242,13 +242,14 @@ class licensePlateHandler():
                     p=self.vector_to_str(self.model.predict(letter_img)[0])
                     prediction += p
 
+                prediction = self.lp_confusion_correction(prediction)
                 print(prediction)
                 self.ps_plates[spot].append(prediction)
 
         if len(self.ps_plates[spot]) != 0 and self.time_looking_for_lp == 0:
             self.time_looking_for_lp = rospy.get_rostime().secs
 
-        if rospy.get_rostime().secs - self.time_looking_for_lp > 2.5 and self.time_looking_for_lp != 0:
+        if rospy.get_rostime().secs - self.time_looking_for_lp > 3 and self.time_looking_for_lp != 0:
             potential_winners = self.ps_plates[spot]
             plate_count = Counter(potential_winners)
             top = plate_count.most_common(1)
@@ -279,3 +280,24 @@ class licensePlateHandler():
 
 
         # TODO B/3 Mix up
+
+
+    def lp_confusion_correction(self, lp_str):
+        correct_lp = ""
+        for c in lp_str[:2]:
+            if c == "8" or c == "3":
+                correct_lp += "B"
+            elif c == "5":
+                correct_lp += "S"
+            else:
+                correct_lp += c
+
+        for c in lp_str[2:]:
+            if c == "S":
+                correct_lp += "5"
+            elif c == "B":
+                correct_lp += "8"
+            else:
+                correct_lp += c
+        return correct_lp
+                

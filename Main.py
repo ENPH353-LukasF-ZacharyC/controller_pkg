@@ -21,7 +21,7 @@ def fprint(*args):
     @return None
     @author Lukas
     """
-    print(MODULE_NAME + ": " + " ".join(map(str,args)))
+    print(str(rospy.get_rostime().secs) + ": " + MODULE_NAME + ": " + " ".join(map(str,args)))
 
 class main():
     RUN_TIME = 1000 # How many seconds the robot should be running for
@@ -64,8 +64,8 @@ class main():
         self.img_sub.unregister()
 
 if __name__ == '__main__':
-    fprint("starting Script")
-    fprint("New Branch")
+    print("starting Script")
+    # fprint("New Branch")
     rospy.init_node('driver', anonymous=True)
     m = main()
     m.lp_pub.publish('TeamRed,multi21,0,AA00')

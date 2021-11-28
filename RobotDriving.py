@@ -18,13 +18,13 @@ def fprint(*args):
     @return None
     @author Lukas
     """
-    print(MODULE_NAME + ": " + " ".join(map(str,args)))
+    print(str(rospy.get_rostime().secs) + ": " + MODULE_NAME + ": " + " ".join(map(str,args)))
 
 class drivingHandler():
     BLUE_CAR_THRESHOLD = 100000
     INTERSECTION_THRESHOLD = 2200000
-    MOVEMENT_THRESHOLD = 100000
-    STILL_THRESHOLD = 40000 # Summed number of pixel values where we can expect to see movement 
+    MOVEMENT_THRESHOLD = 150000
+    STILL_THRESHOLD = 30000 # Summed number of pixel values where we can expect to see movement 
     STOP_LINE_THRESHOLD = 1500000 # Summed number of red pixel values where we can expect to see a red stop line
     
     CROSSWALK_TIME = 5
@@ -131,7 +131,7 @@ class drivingHandler():
         cv2.putText(img, ".", (cX, cY),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
         cv2.imshow("Road Following", img)
         if np.sum(hsv) > self.BLUE_CAR_THRESHOLD:
-            fprint("Blue Car: ", np.sum(hsv))
+            # fprint("Blue Car: ", np.sum(hsv))
             self.BlueCar = True
         else: 
             self.BlueCar = False
@@ -304,11 +304,13 @@ class drivingHandler():
         az = -2*P*offset
         lx = max(0.5 - P*np.abs(offset),0)
 
-        fprint("CIRCLE ", self.outter_circle, self.inner_circle)
+        # fprint("CIRCLE ", self.outter_circle, self.inner_circle)
 
         if intersection:
-            if self.outter_circle or self.inner_circle:
+            if self.outter_circle:
                 az -= 0.8
+            elif self.inner_circle:
+                az -= 1.0
             else:
                 fprint("TRANSITIONING")
                 if self.intersection_time == 0: 
@@ -331,7 +333,7 @@ class drivingHandler():
                 lx -= 0.1
                 az -= 0.5
             elif self.inner_circle:
-                az += 0.1
+                pass
         
         if self.start:
             az = abs(az)
@@ -345,7 +347,7 @@ class drivingHandler():
             lx = max(lx, 0.5)
             az = max(az, 0)
     
-        self.twist_(lx , az)
+        self.twist_(max(lx,0) , az)
 
 
 
