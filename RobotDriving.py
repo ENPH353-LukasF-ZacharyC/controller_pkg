@@ -23,7 +23,7 @@ def fprint(*args):
 class drivingHandler():
     BLUE_CAR_THRESHOLD = 100000
     INTERSECTION_THRESHOLD = 2200000
-    MOVEMENT_THRESHOLD = 150000
+    MOVEMENT_THRESHOLD = 75000
     STILL_THRESHOLD = 30000 # Summed number of pixel values where we can expect to see movement 
     STOP_LINE_THRESHOLD = 1500000 # Summed number of red pixel values where we can expect to see a red stop line
     
@@ -43,7 +43,7 @@ class drivingHandler():
         self.twist = Twist() # Car's velocity
         self.previous_img = None # Previously seen image (used for motion detection not always up to date)
         self.clear_time = 0 # Counts how many frames without movement have been seen   
-        self.waited = False # Stores whether the car is waiting at a cross walk or not
+        self.waited = 0 # Stores whether the car is waiting at a cross walk or not
         self.stop_time = 0 
         self.pause = True
         self.cross_time = 0 # Stores the time the car started to cross a crosswalk at
@@ -142,7 +142,7 @@ class drivingHandler():
             fprint("Upcoming intersection")
             intersection = True
         else: 
-            # fprint("On the road")
+            fprint("On the road")
             intersection = False
         k = cv2.waitKey(1) & 0xFF
         if k == 27:
@@ -199,7 +199,7 @@ class drivingHandler():
             if k == 27:
                 cv2.destroyAllWindows()
             if np.sum(diff_img) > self.MOVEMENT_THRESHOLD and self.stop_time + 2 < rospy.get_rostime().secs:
-                self.waited = True
+                self.waited += 1
             fprint("Waited: ", self.waited)
             return np.sum(diff_img) > self.STILL_THRESHOLD
     
@@ -229,12 +229,12 @@ class drivingHandler():
             if not self.checkMovement(img):
                 fprint("All clear " + str(self.clear_time))
                 
-                if self.waited and self.clear_time + 0.5 < rospy.get_rostime().secs:
+                if self.waited > 5 and self.clear_time + 0.5 < rospy.get_rostime().secs:
                     fprint("Crossing")
                     self.cross_time = rospy.get_rostime().secs
                     self.clear_time = rospy.get_rostime().secs
                     self.pause = False
-                    self.waited = False
+                    self.waited = 0
                     self.stop_time = 0
                     return False
 
@@ -261,12 +261,12 @@ class drivingHandler():
             if not self.checkMovement(img):
                 fprint("All clear " + str(self.clear_time))
                 
-                if self.waited and self.clear_time + 0.5 < rospy.get_rostime().secs:
-                    fprint("Crossing")
+                if self.waited  > 5 and self.clear_time + 0.5 < rospy.get_rostime().secs:
+                    fprint("Turning In")
                     self.intersection_time = rospy.get_rostime().secs
                     self.clear_time = rospy.get_rostime().secs
                     self.pause = False
-                    self.waited = False 
+                    self.waited = 0
                     return False
 
                 else:
@@ -298,7 +298,7 @@ class drivingHandler():
 
         intersection, offset = self.getOffset(img.copy())
 
-        fprint(offset)
+        # fprint(offset)
         P = 0.01
 
         az = -2*P*offset

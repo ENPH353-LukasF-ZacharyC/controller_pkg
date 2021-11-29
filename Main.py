@@ -48,7 +48,7 @@ class main():
             if self.drivingHandler.outter_circle or self.drivingHandler.inner_circle or self.licensePlateHandler.current_ps_index < 6: 
                 if self.licensePlateHandler.reportLicensePlate(img2) is not None:
                     self.stop()
-        fprint(self.licensePlateHandler.current_ps_index)
+        # fprint(self.licensePlateHandler.current_ps_index)
         if self.licensePlateHandler.current_ps_index == 5 and self.licensePlateHandler.time_looking_for_lp > 0:
             self.drivingHandler.outter_circle = False
 

@@ -208,7 +208,7 @@ class licensePlateHandler():
         self.time_looking_for_lp = 0
 
     def load_model(self):
-        return keras.models.load_model("Nov26_New_Font_Model1_Letter_Identification_NN.h5")
+        return keras.models.load_model("Nov26_New_Font_Model2_Letter_Identification_NN.h5")
 
     def vector_to_str(self, vector):
         m = np.argmax(vector)
@@ -264,6 +264,7 @@ class licensePlateHandler():
             
         if self.current_ps_index > 7:
             sleep(0.5)
+            fprint(self.ps_plates)
             self.lp_pub.publish('TeamRed,multi21,-1,AA00')
             return True
 
