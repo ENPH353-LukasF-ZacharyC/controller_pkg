@@ -25,7 +25,7 @@
 - In combonation with Lab4 could be the way we find and identify license plates
 
 #Lab6
-- Used machine learning b y Q values to make a robot follow a line
+- Used machine learning by Q values to make a robot follow a line
 - Fairly effective
 - Robot learned slowly but successfully completed a lap
 - Need to look more into loading and storing pickle data
