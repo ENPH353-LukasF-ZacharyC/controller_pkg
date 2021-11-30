@@ -1,3 +1,5 @@
+/These logs were originally kept elsewhere/
+
 #November 18th
 
 - Started the code for the license plate recognition neural network using lab 5 as a basis. Lukas used a license plate object to store the plate images, the plate letters and numbers, and the text, which I think would be really useful for generating training data.
