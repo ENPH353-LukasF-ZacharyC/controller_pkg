@@ -1,4 +1,4 @@
-/Forgot to do these logs down, here's a summary of our progress/
+/Forgot to do these logs, here's a summary of our progress/
 
 # License Plate Logs
 
