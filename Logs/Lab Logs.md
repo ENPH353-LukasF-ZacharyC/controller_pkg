@@ -1,3 +1,5 @@
+/These logs were originally kept elsewhere/
+
 #Lab1
 - Getting Linux installed
 
