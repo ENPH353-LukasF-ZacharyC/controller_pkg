@@ -1,4 +1,4 @@
-/These logs were originally kept elsewhere/
+These logs were originally kept elsewhere
 
 # November 18th
 
