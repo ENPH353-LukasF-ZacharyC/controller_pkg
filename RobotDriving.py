@@ -186,7 +186,7 @@ class drivingHandler():
             diff_img = img - self.previous_img
             kernel = np.ones((5,5),np.uint8)
             diff_img = cv2.erode(diff_img, kernel,iterations = 1)
-            fprint("movement: " + str(np.sum(diff_img)))
+            # fprint("movement: " + str(np.sum(diff_img)))
             self.previous_img = img
 
             s  = np.sum(diff_img)
@@ -202,7 +202,10 @@ class drivingHandler():
                 cv2.destroyAllWindows()
             if np.sum(diff_img) > self.MOVEMENT_THRESHOLD and self.stop_time + 1.5 < rospy.get_rostime().secs:
                 self.waited += 1
+            else:
+                self.waited = max(self.waited - 0.1, 0)
             fprint("Waited: ", self.waited)
+            fprint("Still: ", np.sum(diff_img) > self.STILL_THRESHOLD)
             return np.sum(diff_img) > self.STILL_THRESHOLD
     
     def twist_(self, x, z, override = False):
@@ -323,7 +326,7 @@ class drivingHandler():
             elif self.inner_circle:
                 lx = lx = max(lx, 0.2)
                 az -= 1.0
-            else:
+            elif not self.BlueCar:
                 fprint("TRANSITIONING")
                 if self.intersection_time == 0: 
                     self.intersection_time = rospy.get_rostime().secs
