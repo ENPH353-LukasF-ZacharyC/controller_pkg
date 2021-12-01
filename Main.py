@@ -45,11 +45,13 @@ class main():
             img = self.bridge.imgmsg_to_cv2(img, "bgr8")
             img2 = img.copy()
 
-            self.drivingHandler.drive(img, len(self.licensePlateHandler.carBacks) > 0)
+            self.drivingHandler.drive(img, len(self.licensePlateHandler.lp) > 0)
 
             if self.drivingHandler.outter_circle or self.drivingHandler.inner_circle or self.licensePlateHandler.current_ps_index < 6: 
                 if self.licensePlateHandler.reportLicensePlate(img2) is not None:
                     self.stop()
+            else:
+                self.licensePlateHandler.lp = []
         # fprint(self.licensePlateHandler.current_ps_index)
         if self.licensePlateHandler.current_ps_index == 5 and self.licensePlateHandler.time_looking_for_lp > 0:
             self.drivingHandler.outter_circle = False

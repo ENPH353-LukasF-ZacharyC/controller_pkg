@@ -39,6 +39,7 @@ class licensePlateHandler():
         self.current_ps_index = 0
         self.time_looking_for_lp = 0
         self.carBacks = []
+        self.lp = []
 
     def get_lp_letters(self, img):
         """
@@ -91,7 +92,7 @@ class licensePlateHandler():
                 im = img[y:y+h , x:x+w]
                 
                 Lkernel = np.ones((5,5), np.uint8)
-                Skernel = np.ones((3,3), np.uint8) 
+                Skernel = np.ones((2,2), np.uint8) 
                 im = cv2.dilate(im,Lkernel, iterations= 1)
                 im = cv2.erode(im,Skernel, iterations= 1)
                 letters.append(im)
@@ -126,8 +127,10 @@ class licensePlateHandler():
             img = cv2.dilate(img, kernel, iterations= 1)
             img = cv2.erode(img, Wkernel, iterations = 1)
             img = cv2.dilate(img, kernel, iterations = 1)
-            img = cv2.dilate(img, Wkernel, iterations = 5)
+            img = cv2.dilate(img, Wkernel, iterations = 10)
             img = cv2.erode(img, Tkernel, iterations = 1)
+
+            cv2.imshow("LP filtered", img)
 
             _, contours, _hierarchy = cv2.findContours(img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
             squares = []
@@ -136,7 +139,7 @@ class licensePlateHandler():
                 cnt_len = cv2.arcLength(cnt, True)
                 cnt = cv2.approxPolyDP(cnt, 0.02*cnt_len, True)
                 if len(cnt) == 4 and cv2.isContourConvex(cnt) and cv2.contourArea(cnt) > 1500: 
-                    # fprint(cv2.contourArea(cnt))
+                    fprint("LP found")
                     squares.append(cnt)
 
             for s in squares:
@@ -149,6 +152,7 @@ class licensePlateHandler():
                 dst = cv2.resize(dst, (600, 300))
                 lp.append(dst)
                 cv2.imshow("License plate", dst)
+        self.lp = lp
         return lp
         
     def get_car_back(self, img):
@@ -177,15 +181,18 @@ class licensePlateHandler():
         img = cv2.erode(img, Tkernel, iterations = 2)
         img = cv2.dilate(img, kernel, iterations = 2)
         img = cv2.erode(img, Tkernel, iterations = 3)
-
+        cv2.imshow("carbackss", img)
         _, contours, _hierarchy = cv2.findContours(img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
         squares = []
         for cnt in contours:
             cnt_len = cv2.arcLength(cnt, True)
             cnt = cv2.approxPolyDP(cnt, 0.02*cnt_len, True)
-            if len(cnt) == 4 and cv2.isContourConvex(cnt) and cv2.contourArea(cnt) > 7500: # and cv2.contourArea(cnt) > 1000, 
-                # fprint(cv2.contourArea(cnt))
-                squares.append(cnt)
+            # fprint(cv2.contourArea(cnt))
+            if len(cnt) == 4 and cv2.isContourConvex(cnt): # and cv2.contourArea(cnt) > 1000, 
+                # fprint("Accepted ", cv2.contourArea(cnt) )
+                if cv2.contourArea(cnt) > 5000:
+                    fprint("Carback Found")
+                    squares.append(cnt)
         
         for s in squares:
             x = 100
@@ -253,7 +260,7 @@ class licensePlateHandler():
         if len(self.ps_plates[spot]) != 0 and self.time_looking_for_lp == 0:
             self.time_looking_for_lp = rospy.get_rostime().secs
 
-        if rospy.get_rostime().secs - self.time_looking_for_lp > 2.75 and self.time_looking_for_lp != 0 and len(self.ps_plates[spot]) >= 2:
+        if rospy.get_rostime().secs - self.time_looking_for_lp > 4 and self.time_looking_for_lp != 0 and len(self.ps_plates[spot]) >= 2:
             potential_winners = self.ps_plates[spot]
             plate_count = Counter(potential_winners)
             top = plate_count.most_common(1)
