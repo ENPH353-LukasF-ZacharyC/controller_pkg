@@ -24,7 +24,7 @@ def fprint(*args):
     print(str(rospy.get_rostime().secs) + ": " + MODULE_NAME + ": " + " ".join(map(str,args)))
 
 class main():
-    RUN_TIME = 1000 # How many seconds the robot should be running for
+    RUN_TIME = 120 # How many seconds the robot should be running for
 
     def __init__(self):
         self.bridge = CvBridge()
@@ -44,7 +44,9 @@ class main():
         else:
             img = self.bridge.imgmsg_to_cv2(img, "bgr8")
             img2 = img.copy()
-            self.drivingHandler.drive(img)
+
+            self.drivingHandler.drive(img, len(self.licensePlateHandler.carBacks) > 0)
+
             if self.drivingHandler.outter_circle or self.drivingHandler.inner_circle or self.licensePlateHandler.current_ps_index < 6: 
                 if self.licensePlateHandler.reportLicensePlate(img2) is not None:
                     self.stop()

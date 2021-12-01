@@ -37,7 +37,7 @@ class drivingHandler():
         @return None
         @author Lukas
         """
-        
+        self.slow = 0
         self.twist_pub = rospy.Publisher("R1/cmd_vel", Twist, queue_size=1) # Handles car communication
         self.img_num = 0 # Stores how many images have been seen
         self.twist = Twist() # Car's velocity
@@ -211,6 +211,9 @@ class drivingHandler():
         @return None
         @author Lukas
         """
+        if abs(self.twist.linear.x - x) > 0.3:
+            x = 0.3
+
         if not self.pause or override:
             self.twist.linear.x = x
             self.twist.angular.z = z
@@ -263,7 +266,7 @@ class drivingHandler():
             if not self.checkMovement(img):
                 fprint("All clear " + str(self.clear_time))
                 
-                if self.waited  > 5 and self.clear_time + 0.5 < rospy.get_rostime().secs:
+                if self.waited > 10 and self.clear_time + 0.5 < rospy.get_rostime().secs:
                     fprint("Turning In")
                     self.intersection_time = rospy.get_rostime().secs
                     self.clear_time = rospy.get_rostime().secs
@@ -286,7 +289,7 @@ class drivingHandler():
         else:
             return False
 
-    def drive(self, img):
+    def drive(self, img, slow):
         """
         Takes the robots camera image and controls the robot to follow the road
         @return None
@@ -305,12 +308,12 @@ class drivingHandler():
 
         if not self.inner_circle:
             az = -3*P*offset
-            lx = max(0.45 - P*np.abs(offset),0)
+            lx = max(0.5 - P*np.abs(offset),0)
         elif self.inner_circle:
             az = -4*P*offset
-            lx = max(0.32 - P*np.abs(offset),0)
+            lx = max(0.5 - P*np.abs(offset),0)
 
-        
+    
 
         # fprint("CIRCLE ", self.outter_circle, self.inner_circle)
 
@@ -340,16 +343,27 @@ class drivingHandler():
         if self.BlueCar:
             fprint("CAR SEEN")
             if not self.inner_circle:
-                lx -= 0.1
-                az -= 0.5
+                lx -= 0.05
+                az -= 0.55
             elif self.inner_circle:
                 pass
         
     
+        if self.slow > 0:
+            self.slow -= 1
+        else:
+            self.slow = 0
 
         if self.start:
             az = abs(az)
+        elif slow or self.slow > 0:
+            print("SLOWING DOWN")
+            if slow:
+                self.slow = 5
+            lx = min(lx, 0.1)
         
+         
+
         if self.turn_in_time + 1 > rospy.get_rostime().secs:
             print("Turning In")
             az += 1.6
@@ -359,6 +373,8 @@ class drivingHandler():
             lx = max(lx, 0.5)
             az = max(az, 0)
     
+        
+
         self.twist_(max(lx,0) , az)
 
 
