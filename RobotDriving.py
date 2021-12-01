@@ -22,7 +22,7 @@ def fprint(*args):
 
 class drivingHandler():
     BLUE_CAR_THRESHOLD = 100000
-    INTERSECTION_THRESHOLD = 2200000
+    INTERSECTION_THRESHOLD = 2000000
     MOVEMENT_THRESHOLD = 75000
     STILL_THRESHOLD = 30000 # Summed number of pixel values where we can expect to see movement 
     STOP_LINE_THRESHOLD = 1500000 # Summed number of red pixel values where we can expect to see a red stop line
@@ -138,9 +138,11 @@ class drivingHandler():
 
         s = np.sum(img)
         # fprint("s = ", s)
+        self.intersection = s
         if s > self.INTERSECTION_THRESHOLD:
             fprint("Upcoming intersection")
             intersection = True
+        
         else: 
             fprint("On the road")
             intersection = False
@@ -301,8 +303,14 @@ class drivingHandler():
         # fprint(offset)
         P = 0.01
 
-        az = -2*P*offset
-        lx = max(0.5 - P*np.abs(offset),0)
+        if not self.inner_circle:
+            az = -3*P*offset
+            lx = max(0.45 - P*np.abs(offset),0)
+        elif self.inner_circle:
+            az = -4*P*offset
+            lx = max(0.32 - P*np.abs(offset),0)
+
+        
 
         # fprint("CIRCLE ", self.outter_circle, self.inner_circle)
 
@@ -310,6 +318,7 @@ class drivingHandler():
             if self.outter_circle:
                 az -= 0.8
             elif self.inner_circle:
+                lx = lx = max(lx, 0.1)
                 az -= 1.0
             else:
                 fprint("TRANSITIONING")
@@ -329,12 +338,15 @@ class drivingHandler():
                         self.turn_in_time = rospy.get_rostime().secs
 
         if self.BlueCar:
+            fprint("CAR SEEN")
             if not self.inner_circle:
                 lx -= 0.1
                 az -= 0.5
             elif self.inner_circle:
                 pass
         
+    
+
         if self.start:
             az = abs(az)
         

@@ -45,7 +45,9 @@ def get_lp_letters(img):
         kernel = np.ones((5,5), np.uint8)
         i = cv2.erode(i, Tkernel, iterations = 1)
         i = cv2.dilate(i,kernel, iterations= 1)
+        i = cv2.erode(i, kernel, iterations = 1)
         filtered.append(i)
+        cv2.imshow("Filtered LP",i)
     letters = []
     for img in filtered:    
         _, contours, _hierarchy = cv2.findContours(img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
@@ -208,7 +210,7 @@ class licensePlateHandler():
         self.time_looking_for_lp = 0
 
     def load_model(self):
-        return keras.models.load_model("Nov26_New_Font_Model2_Letter_Identification_NN.h5")
+        return keras.models.load_model("Nov29_New_Font_Model3_Letter_Identification_NN(1).h5")
 
     def vector_to_str(self, vector):
         m = np.argmax(vector)
@@ -249,7 +251,7 @@ class licensePlateHandler():
         if len(self.ps_plates[spot]) != 0 and self.time_looking_for_lp == 0:
             self.time_looking_for_lp = rospy.get_rostime().secs
 
-        if rospy.get_rostime().secs - self.time_looking_for_lp > 3 and self.time_looking_for_lp != 0:
+        if rospy.get_rostime().secs - self.time_looking_for_lp > 3.5 and self.time_looking_for_lp != 0 and len(self.ps_plates[spot]) >= 2:
             potential_winners = self.ps_plates[spot]
             plate_count = Counter(potential_winners)
             top = plate_count.most_common(1)
