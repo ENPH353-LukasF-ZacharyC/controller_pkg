@@ -21,10 +21,10 @@ def fprint(*args):
     @return None
     @author Lukas
     """
-    print(MODULE_NAME + ": " + " ".join(map(str,args)))
+    print(str(rospy.get_rostime().secs) + ": " + MODULE_NAME + ": " + " ".join(map(str,args)))
 
 class main():
-    RUN_TIME = 1000 # How many seconds the robot should be running for
+    RUN_TIME = 120 # How many seconds the robot should be running for
 
     def __init__(self):
         self.bridge = CvBridge()
@@ -34,7 +34,7 @@ class main():
         self.lp_pub = rospy.Publisher("/license_plate", String, queue_size=1)
         self.img_sub = rospy.Subscriber("/R1/pi_camera/image_raw", Image, self.protocol) # Handles car video feed
         self.start_time = rospy.get_rostime().secs
-        sleep(3)
+        sleep(1)
         self.start_time = rospy.get_rostime().secs
         self.drivingHandler.startHandler()
 
@@ -44,8 +44,17 @@ class main():
         else:
             img = self.bridge.imgmsg_to_cv2(img, "bgr8")
             img2 = img.copy()
-            self.drivingHandler.drive(img)
-            # self.licensePlateHandler.reportLicensePlate(img2)
+
+            self.drivingHandler.drive(img, len(self.licensePlateHandler.lp) > 0)
+
+            if self.drivingHandler.outter_circle or self.drivingHandler.inner_circle or self.licensePlateHandler.current_ps_index < 6: 
+                if self.licensePlateHandler.reportLicensePlate(img2) is not None:
+                    self.stop()
+            else:
+                self.licensePlateHandler.lp = []
+        # fprint(self.licensePlateHandler.current_ps_index)
+        if self.licensePlateHandler.current_ps_index == 5 and self.licensePlateHandler.time_looking_for_lp > 0:
+            self.drivingHandler.outter_circle = False
 
 
 
@@ -55,12 +64,12 @@ class main():
         print("Time's Up; Ending Script")
         print("\n========================")
         self.drivingHandler.twist_(0,0)
-        cv2.destoryAllWindows()
+        cv2.destroyAllWindows()
         self.img_sub.unregister()
 
 if __name__ == '__main__':
-    fprint("starting Script")
-    fprint("New Branch")
+    print("starting Script")
+    # fprint("New Branch")
     rospy.init_node('driver', anonymous=True)
     m = main()
     m.lp_pub.publish('TeamRed,multi21,0,AA00')
@@ -68,6 +77,7 @@ if __name__ == '__main__':
     try:
         rospy.spin()
     except KeyboardInterrupt:
+        m.stop()
         fprint("Ending Script")
         m.stop()
         fprint("Script Ended") 
